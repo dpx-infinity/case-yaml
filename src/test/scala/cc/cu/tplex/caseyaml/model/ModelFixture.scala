@@ -10,9 +10,6 @@ case class ModelId(id: String)
 
 case class ProjectModel(id: ModelId,
                         name: String,
-                        groupId: String,
-                        artifactId: String,
-                        version: String,
                         enabled: Boolean,
                         count: Int,
                         fraction: Double,
@@ -20,9 +17,6 @@ case class ProjectModel(id: ModelId,
 
 case class PluginModel(id: ModelId,
                        name: String,
-                       groupId: String,
-                       artifactId: String,
-                       version: String,
                        dependencies: Seq[ModelId])
 
 object ModelFixture {
@@ -31,18 +25,12 @@ object ModelFixture {
   val yentity = YClassMap[ProjectModel](
     "id" --> modelId,
     skipField,
-    "groupId"    --> YString,
-    "artifactId" --> YString,
-    "version"    --> YString,
     "enabled"    --> YBoolean,
     "count"      --> YIntCompatible[Int](),
     "fraction"   --> YFloatCompatible[Double](),
     "plugins"    --> YMap(YClassMap[PluginModel](
       "id"                    --> modelId,
       "name" ~> "pluginName"  --> YString,
-      "groupId"               --> YString,
-      "artifactId"            --> YString,
-      "version"               --> YString,
       "dependencies"          --> YList(modelId)
     ))
   )
@@ -50,9 +38,6 @@ object ModelFixture {
   val model = ProjectModel(
     ModelId("test"),
     "name",
-    "groupId",
-    "artifactId",
-    "version",
     true,
     10,
     12.2,
@@ -60,9 +45,6 @@ object ModelFixture {
       "plugin1" -> PluginModel(
         ModelId("id"),
         "name",
-        "groupId",
-        "artifactId",
-        "version",
         Seq(ModelId("id1"), ModelId("id2"))
       )
     )
