@@ -38,12 +38,34 @@ object ModelFixture {
     "count"      --> YIntCompatible[Int](),
     "fraction"   --> YFloatCompatible[Double](),
     "plugins"    --> YMap(YClassMap[PluginModel](
-      "id"           --> modelId,
-      "name"         --> YString,
-      "groupId"      --> YString,
-      "artifactId"   --> YString,
-      "version"      --> YString,
-      "dependencies" --> YList(modelId)
+      "id"                    --> modelId,
+      "name" ~> "pluginName"  --> YString,
+      "groupId"               --> YString,
+      "artifactId"            --> YString,
+      "version"               --> YString,
+      "dependencies"          --> YList(modelId)
     ))
   )
+
+  val model = ProjectModel(
+    ModelId("test"),
+    "name",
+    "groupId",
+    "artifactId",
+    "version",
+    true,
+    10,
+    12.2,
+    Map(
+      "plugin1" -> PluginModel(
+        ModelId("id"),
+        "name",
+        "groupId",
+        "artifactId",
+        "version",
+        Seq(ModelId("id1"), ModelId("id2"))
+      )
+    )
+  )
+
 }

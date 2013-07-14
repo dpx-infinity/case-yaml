@@ -4,27 +4,7 @@ import org.scalatest.FlatSpec
 import org.expecty.Expecty
 
 class ModelTest extends FlatSpec {
-  val model = ProjectModel(
-    ModelId("test"),
-    "name",
-    "groupId",
-    "artifactId",
-    "version",
-    true,
-    10,
-    12.2,
-    Map(
-      "plugin1" -> PluginModel(
-        ModelId("id"),
-        "name",
-        "groupId",
-        "artifactId",
-        "version",
-        Seq(ModelId("id1"), ModelId("id2"))
-      )
-    )
-  )
-
+  import ModelFixture.model
 
   "YFieldEntry implicit conversion" should "allow access to object fields" in {
     val Seq(id, skip, groupId, artifactId, version, enabled, count, fraction, plugins) =

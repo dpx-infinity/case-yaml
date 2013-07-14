@@ -47,9 +47,10 @@ private[caseyaml] object MapConverter {
     }
 
     def convertClassMap[T](entries: Iterable[YEntry[T]], obj: T): java.util.Map[String, Any] =
-      entries.map { entry =>
-        entry.name -> convert(entry.entity, entry.field(obj).get)
-      }.toMap.asJava
+      entries.map {
+        case SkipField(_) => None
+        case entry => Some(entry.name -> convert(entry.entity, entry.field(obj).get))
+      }.flatten.toMap.asJava
 
     def convertInt(obj: Any): Any = obj match {
       case byte: Byte => byte.toInt
