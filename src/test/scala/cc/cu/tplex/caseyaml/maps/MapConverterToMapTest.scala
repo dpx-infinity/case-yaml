@@ -1,10 +1,11 @@
-package cc.cu.tplex.caseyaml
+package cc.cu.tplex.caseyaml.maps
 
 import org.scalatest.FlatSpec
 import cc.cu.tplex.caseyaml.model._
 import org.scalatest.matchers.ShouldMatchers
 import scala.reflect.ClassTag
 import scala.collection.immutable.HashMap
+import cc.cu.tplex.caseyaml.CaseYamlException
 
 /**
  * Date: 14.07.13

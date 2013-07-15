@@ -9,5 +9,5 @@ import cc.cu.tplex.caseyaml.model.YEntity
  * @author Vladimir Matveev
  */
 object CaseYaml {
-  def forEntity(entity: YEntity) = new Converter(entity)
+  def forEntity[T](entity: YEntity[T]) = new Converter(entity)
 }

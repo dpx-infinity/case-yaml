@@ -13,7 +13,7 @@ package object model {
   case class NamedField(name: String, fieldName: String)
 
   implicit class NamedField2EntryWrapper(val namedField: NamedField) extends AnyVal {
-    def -->[T: TypeTag : ClassTag](entity: YEntity): YEntry[T] = {
+    def -->[T: TypeTag : ClassTag, S](entity: YEntity[S]): YEntry[T, S] = {
       val fsym = typeOf[T].declaration(namedField.fieldName: TermName).asTerm
       def fieldGetter(obj: T) = {
         val im = typeTag[T].mirror.reflect(obj)

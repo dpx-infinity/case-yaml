@@ -2,22 +2,24 @@ package cc.cu.tplex.caseyaml.model
 
 import scala.reflect.runtime.universe._
 import scala.reflect.ClassTag
+import java.math.BigInteger
 
-trait YEntity[+T]
+sealed trait YEntity[+T]
 
-trait YEntry[T, +S] {
+sealed trait YEntry[T, +S] {
   def name: String
   def field: T => FieldMirror
   def entity: YEntity[S]
 }
-
 case class YFieldEntry[T, +S](name: String, field: T => FieldMirror, entity: YEntity[S]) extends YEntry[T, S]
 case class SkipField[T](name: String = null) extends YEntry[T, Nothing] {
   val field = null
   val entity = null
 }
 
-case class YClassMap[T: TypeTag : ClassTag](entries: YEntry[T, _]*) extends YEntity[T] {
+case class YClassMap[T: TypeTag : ClassTag](entries: Seq[YEntry[T, S] forSome {type S}]) extends YEntity[T] {
+  def this(entries: YEntry[T, _]*) = this(entries)
+
   val clazz = typeTag[T].mirror runtimeClass typeOf[T]
   val ctormirror = {
     val classm = typeTag[T].mirror reflectClass typeOf[T].typeSymbol.asClass
@@ -25,43 +27,66 @@ case class YClassMap[T: TypeTag : ClassTag](entries: YEntry[T, _]*) extends YEnt
   }
 }
 
-case class YMap(valueEntity: YEntity) extends YEntity[Map[String, _]]
-case class YList(entity: YEntity) extends YEntity[Seq[_]]
+case class YMap[T](valueEntity: YEntity[T]) extends YEntity[Map[String, T]]
+case class YList[T](entity: YEntity[T]) extends YEntity[Seq[T]]
 
 case class YNullable[T <: AnyRef](entity: YEntity[T]) extends YEntity[T]
 
 case class YStringConverted[T](toStr: T => String, fromStr: String => T) extends YEntity[T]
 
 case object YString extends YEntity[String]
-case object YBoolean extends YEntity[String]
+case object YBoolean extends YEntity[Boolean]
 
-case class YIntCompatible[T : ClassTag]() extends YEntity[T] {
-  val clazz = implicitly[ClassTag[T]].runtimeClass
-  require(YIntCompatible.isValid(clazz), "Required int-compatible class, got " + clazz)
+sealed trait YIntCompatible[T] extends YEntity[T] {
+  def fromInt(int: Int): T
+  def fromLong(long: Long): T
+  def fromBigInt(bigint: java.math.BigInteger): T
 }
 object YIntCompatible {
-  val intCompatibles = Seq(
-    classOf[Byte],
-    classOf[Short],
-    classOf[Int],
-    classOf[Long],
-    classOf[BigInt]
-  )
+  case object YByte extends YIntCompatible[Byte] {
+    def fromInt(int: Int) = int.toByte
+    def fromLong(long: Long) = long.toByte
+    def fromBigInt(bigint: BigInteger) = bigint.byteValue()
+  }
 
-  def isValid(clazz: Class[_]) = intCompatibles contains clazz
+  case object YShort extends YIntCompatible[Short] {
+    def fromInt(int: Int) = int.toShort
+    def fromLong(long: Long) = long.toShort
+    def fromBigInt(bigint: BigInteger) = bigint.shortValue()
+  }
+
+  case object YInt extends YIntCompatible[Int] {
+    def fromInt(int: Int) = int
+    def fromLong(long: Long) = long.toInt
+    def fromBigInt(bigint: BigInteger) = bigint.intValue()
+  }
+
+  case object YLong extends YIntCompatible[Long] {
+    def fromInt(int: Int) = int.toLong
+    def fromLong(long: Long) = long
+    def fromBigInt(bigint: BigInteger) = bigint.longValue()
+  }
+
+  case object YBigInt extends YIntCompatible[BigInt] {
+    def fromInt(int: Int) = BigInt(int)
+    def fromLong(long: Long) = BigInt(long)
+    def fromBigInt(bigint: BigInteger) = BigInt(bigint)
+  }
 }
 
-case class YFloatCompatible[T: ClassTag]() extends YEntity[T] {
-  val clazz = implicitly[ClassTag[T]].runtimeClass
-  require(YFloatCompatible.isValid(clazz), "Required float-compatible class, got " + clazz)
+sealed trait YFloatCompatible[T] extends YEntity[T] {
+  def fromDouble(double: Double): T
 }
-
 object YFloatCompatible {
-  val floatCompatibles = Seq(
-    classOf[Float],
-    classOf[Double],
-    classOf[BigDecimal]
-  )
+  case object YFloat extends YFloatCompatible[Float] {
+    def fromDouble(double: Double) = double.toFloat
+  }
 
-  def isValid(clazz: Class[_]) = floatCompatibles contains clazz
+  case object YDouble extends YFloatCompatible[Double] {
+    def fromDouble(double: Double) = double
+  }
+
+  case object YBigDecimal extends YFloatCompatible[BigDecimal] {
+    def fromDouble(double: Double) = BigDecimal(double)
+  }
 }
