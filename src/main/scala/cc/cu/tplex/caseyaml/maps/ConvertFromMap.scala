@@ -19,12 +19,12 @@ object ConvertFromMap {
     case YNullable(valueEntity: YEntity[AnyRef]) => convertNullable(valueEntity, src).asInstanceOf[T]
     case YString => convertString(checkNull(src, "string")).asInstanceOf[T]
     case YBoolean => convertBoolean(checkNull(src, "boolean")).asInstanceOf[T]
-    case ic: YIntCompatible[_] => convertInt(ic, checkNull(src, "int, long or java.math.BigInteger")).asInstanceOf[T]
-    case fc: YFloatCompatible[_] => convertFloat(fc, checkNull(src, "double")).asInstanceOf[T]
+    case ic: YIntCompatible[T] => convertInt(ic, checkNull(src, "int, long or java.math.BigInteger"))
+    case fc: YFloatCompatible[T] => convertFloat(fc, checkNull(src, "double"))
     case YMap(valueEntity: YEntity[_]) => convertMap(valueEntity, checkNull(src, "java.util.Map")).asInstanceOf[T]
     case YList(valueEntity: YEntity[_]) => convertList(valueEntity, checkNull(src, "java.util.List")).asInstanceOf[T]
     case YStringConverted(_, from) => from.asInstanceOf[(String) => T](convertString(src))
-    case cm @ YClassMap(_) => convertClassMap(cm, checkNull(src, "java.util.Map"))
+    case cm: YClassMap[T] => convertClassMap(cm, checkNull(src, "java.util.Map"))
   }
 
   def checkNull[T](obj: T, tpe: String) = obj match {
@@ -79,14 +79,4 @@ object ConvertFromMap {
 
     case _ => throw CaseYamlException("Expected java.util.Map, got " + src.getClass.getName)
   }
-
-//  def convertClassMap[T](cm: YClassMap[T], src: Any): T = src match {
-//    case map: java.util.Map[String, _] =>
-//      val ctorArgs = cm.entries.map {
-//        case SkipField(_) => None
-//        case YFieldEntry(name, field, entity) => Some(convert(entity, map.get("name")))
-//      }.flatten
-//      cm.ctormirror(ctorArgs: _*).asInstanceOf[T]
-//    case _ => throw CaseYamlException("Expected java.util.Map, got " + src.getClass.getName)
-//  }
 }

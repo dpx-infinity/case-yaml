@@ -109,13 +109,35 @@ class ConvertToMapTest extends FlatSpec with ShouldMatchers {
   }
 
   it should "serialize an implementation of Map[String, ?] as java.util.Map[String, ?]" in {
-    val m = HashMap("a" -> 1, "b" -> 2, "c" -> 3)
+    val m: Map[String, Int] = HashMap("a" -> 1, "b" -> 2, "c" -> 3)
 
     val rm = ConvertToMap.convert(YMap(YIntCompatible.YInt), m).asInstanceOf[java.util.Map[String, Int]]
     rm should have size 3
     rm.get("a") should equal (1)
     rm.get("b") should equal (2)
     rm.get("c") should equal (3)
+  }
+
+  it should "throw an exception when serializing null as java.util.Map" in {
+    intercept[CaseYamlException] {
+      ConvertToMap.convert(YMap(YString), null)
+    }.message should equal ("Expected map-compatible type, got null")
+  }
+
+  it should "serialize an implementation of Seq[?] as java.util.List[?]" in {
+    val list = List(1.1, 1.2, 1.3)
+
+    val rm = ConvertToMap.convert(YList(YFloatCompatible.YDouble), list).asInstanceOf[java.util.List[Double]]
+    rm should have size 3
+    rm.get(0) should equal (1.1)
+    rm.get(1) should equal (1.2)
+    rm.get(2) should equal (1.3)
+  }
+
+  it should "throw an exception when serializing null as java.util.List" in {
+    intercept[CaseYamlException] {
+      ConvertToMap.convert(YList(YString), null)
+    }.message should equal ("Expected list-compatible type, got null")
   }
 
   it should "serialize an object to a java.util.Map/java.util.List tree using YEntity tree" in {
