@@ -26,8 +26,8 @@ object ModelFixture {
     "id" --> modelId,
     skipField,
     "enabled"    --> YBoolean,
-    "count"      --> YIntCompatible[Int](),
-    "fraction"   --> YFloatCompatible[Double](),
+    "count"      --> YIntCompatible.YInt,
+    "fraction"   --> YFloatCompatible.YDouble,
     "plugins"    --> YMap(YClassMap[PluginModel](
       "id"                    --> modelId,
       "name" ~> "pluginName"  --> YString,

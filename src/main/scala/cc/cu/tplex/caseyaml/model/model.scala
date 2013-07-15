@@ -17,9 +17,7 @@ case class SkipField[T](name: String = null) extends YEntry[T, Nothing] {
   val entity = null
 }
 
-case class YClassMap[T: TypeTag : ClassTag](entries: Seq[YEntry[T, S] forSome {type S}]) extends YEntity[T] {
-  def this(entries: YEntry[T, _]*) = this(entries)
-
+case class YClassMap[T: TypeTag : ClassTag](entries: YEntry[T, _]*) extends YEntity[T] {
   val clazz = typeTag[T].mirror runtimeClass typeOf[T]
   val ctormirror = {
     val classm = typeTag[T].mirror reflectClass typeOf[T].typeSymbol.asClass

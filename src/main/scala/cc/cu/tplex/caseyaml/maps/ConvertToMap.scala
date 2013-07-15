@@ -22,8 +22,8 @@ object ConvertToMap {
     case YMap(valueEntity: YEntity[_]) => convertMap(valueEntity, checkNull(obj, "map-compatible type"))
     case YList(valueEntity: YEntity[_]) => convertList(valueEntity, checkNull(obj, "list-compatible type"))
     case YStringConverted(to, _) => to.asInstanceOf[(T) => String](obj)
-    case cm @ YClassMap(entries: Seq[YEntry[T, S] forSome {type S}]) =>
-      if (cm.clazz.isInstance(obj)) convertClassMap(entries, checkNull(obj, cm.clazz.getName))
+    case cm: YClassMap[T] =>
+      if (cm.clazz.isInstance(obj)) convertClassMap(cm, checkNull(obj, cm.clazz.getName))
       else throw CaseYamlException(s"Expected ${cm.clazz.getName}, got ${obj.getClass.getName}")
   }
 
@@ -57,8 +57,8 @@ object ConvertToMap {
     case _ => throw CaseYamlException("Expected seq-compatible type, got " + obj.getClass.getName)
   }
 
-  def convertClassMap[T](entries: Iterable[YEntry[T, S] forSome {type S}], obj: T): java.util.Map[String, Any] =
-    entries.map {
+  def convertClassMap[T](cm: YClassMap[T], obj: T): java.util.Map[String, Any] =
+    cm.entries.map {
       case SkipField(_) => None
       case entry => Some(entry.name -> convert(entry.entity, entry.field(obj).get))
     }.flatten.toMap.asJava

@@ -24,7 +24,7 @@ class ModelTest extends FlatSpec with ShouldMatchers {
       pluginsMap should have size 1
 
       val Seq(id, name, groupId, artifactId, version, dependencies) =
-        plugins.entity.asInstanceOf[YMap].valueEntity.asInstanceOf[YClassMap[PluginModel]].entries
+        plugins.entity.asInstanceOf[YMap[PluginModel]].valueEntity.asInstanceOf[YClassMap[PluginModel]].entries
 
       val plugin = pluginsMap("plugin1")
       id.field(plugin).get           should equal (ModelId("id"))

@@ -6,6 +6,7 @@ import org.scalatest.matchers.ShouldMatchers
 import scala.reflect.ClassTag
 import scala.collection.immutable.HashMap
 import cc.cu.tplex.caseyaml.CaseYamlException
+import cc.cu.tplex.caseyaml.model.YIntCompatible.YByte
 
 /**
  * Date: 14.07.13
@@ -13,7 +14,7 @@ import cc.cu.tplex.caseyaml.CaseYamlException
  *
  * @author Vladimir Matveev
  */
-class MapConverterToMapTest extends FlatSpec with ShouldMatchers {
+class ConvertToMapTest extends FlatSpec with ShouldMatchers {
   "MapConverter.ToMap" should "serialize int-compatible objects directly" in {
     val byte: Byte = 1
     val short: Short = 2
@@ -21,29 +22,29 @@ class MapConverterToMapTest extends FlatSpec with ShouldMatchers {
     val long: Long = 4
     val bigint: BigInt = 5
 
-    def convert[T: ClassTag](x: T) = MapConverter.ToMap.convert(YIntCompatible[T](), x)
+    import ConvertToMap.convert
 
-    convert(byte) should equal (1: Byte)
-    convert(short) should equal (2: Short)
-    convert(int) should equal (3: Int)
-    convert(long) should equal (4: Long)
-    convert(bigint) should equal (java.math.BigInteger.valueOf(5))
+    convert(YIntCompatible.YByte, byte) should equal (1: Byte)
+    convert(YIntCompatible.YShort, short) should equal (2: Short)
+    convert(YIntCompatible.YInt, int) should equal (3: Int)
+    convert(YIntCompatible.YLong, long) should equal (4: Long)
+    convert(YIntCompatible.YBigInt, bigint) should equal (java.math.BigInteger.valueOf(5))
   }
 
   it should "throw an exception when serializing int-incompatible type as int-compatible" in {
     intercept[CaseYamlException] {
-      MapConverter.ToMap.convert(YIntCompatible[Int](), "abc")
-    }.message should equal ("Requested int-compatible type, got java.lang.String")
+      ConvertToMap.convert(YIntCompatible.YInt, "abc")
+    }.message should equal ("Expected int-compatible type, got java.lang.String")
 
     intercept[CaseYamlException] {
-      MapConverter.ToMap.convert(YIntCompatible[Long](), 10.2: Double)
-    }.message should equal ("Requested int-compatible type, got java.lang.Double")
+      ConvertToMap.convert(YIntCompatible.YLong, 10.2: Double)
+    }.message should equal ("Expected int-compatible type, got java.lang.Double")
   }
 
   it should "throw an exception when serializing null as int-compatible type" in {
     intercept[CaseYamlException] {
-      MapConverter.ToMap.convert(YIntCompatible[Int](), null)
-    }.message should equal ("Requested int-compatible type, got null")
+      ConvertToMap.convert(YIntCompatible.YShort, null)
+    }.message should equal ("Expected int-compatible type, got null")
   }
 
   it should "serialize float-compatible objects directly" in {
@@ -51,66 +52,66 @@ class MapConverterToMapTest extends FlatSpec with ShouldMatchers {
     val double: Double = 2.2
     val bigdec: BigDecimal = 3.3
 
-    def convert[T: ClassTag](x: T) = MapConverter.ToMap.convert(YFloatCompatible[T](), x)
+    import ConvertToMap.convert
 
-    convert(float) should equal (1.1.toFloat: Float)
-    convert(double) should equal (2.2)
-    convert(bigdec) should equal (java.math.BigDecimal.valueOf(3.3))
+    convert(YFloatCompatible.YFloat, float) should equal (1.1.toFloat: Float)
+    convert(YFloatCompatible.YDouble, double) should equal (2.2)
+    convert(YFloatCompatible.YBigDecimal, bigdec) should equal (java.math.BigDecimal.valueOf(3.3))
   }
 
   it should "throw an exception when serializing float-incompatible type as float-compatible" in {
     intercept[CaseYamlException] {
-      MapConverter.ToMap.convert(YFloatCompatible[Float](), "abc")
-    }.message should equal ("Requested float-compatible type, got java.lang.String")
+      ConvertToMap.convert(YFloatCompatible.YFloat, "abc")
+    }.message should equal ("Expected float-compatible type, got java.lang.String")
 
     intercept[CaseYamlException] {
-      MapConverter.ToMap.convert(YFloatCompatible[Double](), 10: Long)
-    }.message should equal ("Requested float-compatible type, got java.lang.Long")
+      ConvertToMap.convert(YFloatCompatible.YDouble, 10: Long)
+    }.message should equal ("Expected float-compatible type, got java.lang.Long")
   }
 
   it should "throw an exception when serializing null as float-compatible type" in {
     intercept[CaseYamlException] {
-      MapConverter.ToMap.convert(YFloatCompatible[Float](), null)
-    }.message should equal ("Requested float-compatible type, got null")
+      ConvertToMap.convert(YFloatCompatible.YBigDecimal, null)
+    }.message should equal ("Expected float-compatible type, got null")
   }
 
   it should "serialize strings directly" in {
-    MapConverter.ToMap.convert(YString, "abcd") should equal ("abcd")
+    ConvertToMap.convert(YString, "abcd") should equal ("abcd")
   }
 
   it should "throw an exception when serializing non-string object as a string" in {
     intercept[CaseYamlException] {
-      MapConverter.ToMap.convert(YString, 10: Int)
-    }.message should equal ("Requested string, got java.lang.Integer")
+      ConvertToMap.convert(YString, 10: Int)
+    }.message should equal ("Expected string, got java.lang.Integer")
   }
 
   it should "throw an exception when serializing null as a string" in {
     intercept[CaseYamlException] {
-      MapConverter.ToMap.convert(YString, null)
-    }.message should equal ("Requested string, got null")
+      ConvertToMap.convert(YString, null)
+    }.message should equal ("Expected string, got null")
   }
 
   it should "serialize booleans directly" in {
-    MapConverter.ToMap.convert(YBoolean, true) should equal (true)
-    MapConverter.ToMap.convert(YBoolean, false) should equal (false)
+    ConvertToMap.convert(YBoolean, true) should equal (true)
+    ConvertToMap.convert(YBoolean, false) should equal (false)
   }
 
   it should "throw an exception when serializing non-boolean object as a boolean" in {
     intercept[CaseYamlException] {
-      MapConverter.ToMap.convert(YBoolean, "abcd")
-    }.message should equal ("Requested boolean, got java.lang.String")
+      ConvertToMap.convert(YBoolean, "abcd")
+    }.message should equal ("Expected boolean, got java.lang.String")
   }
 
   it should "throw an exception when serializing null as a boolean" in {
     intercept[CaseYamlException] {
-      MapConverter.ToMap.convert(YBoolean, null)
-    }.message should equal ("Requested boolean, got null")
+      ConvertToMap.convert(YBoolean, null)
+    }.message should equal ("Expected boolean, got null")
   }
 
   it should "serialize an implementation of Map[String, ?] as java.util.Map[String, ?]" in {
     val m = HashMap("a" -> 1, "b" -> 2, "c" -> 3)
 
-    val rm = MapConverter.ToMap.convert(YMap(YIntCompatible[Int]()), m).asInstanceOf[java.util.Map[String, Int]]
+    val rm = ConvertToMap.convert(YMap(YIntCompatible.YInt), m).asInstanceOf[java.util.Map[String, Int]]
     rm should have size 3
     rm.get("a") should equal (1)
     rm.get("b") should equal (2)
@@ -118,7 +119,7 @@ class MapConverterToMapTest extends FlatSpec with ShouldMatchers {
   }
 
   it should "serialize an object to a java.util.Map/java.util.List tree using YEntity tree" in {
-    val m = MapConverter.ToMap
+    val m = ConvertToMap
             .convert(ModelFixture.yentity, ModelFixture.model)
             .asInstanceOf[java.util.Map[String, Any]]
 
