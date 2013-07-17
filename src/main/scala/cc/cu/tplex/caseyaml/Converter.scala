@@ -10,10 +10,10 @@ import org.yaml.snakeyaml.constructor.SafeConstructor
  *
  * @author Vladimir Matveev
  */
-class Converter[T] private[caseyaml] (entity: YEntity[T], yaml: Yaml = new Yaml(new SafeConstructor)) {
+class Converter[Obj, Yml] private[caseyaml] (entity: YEntity[Obj, Yml], yaml: Yaml = new Yaml(new SafeConstructor)) {
   def withYaml(yaml: Yaml) = new Converter(entity, yaml)
 
-  def serialize(obj: T) = {
+  def serialize(obj: Obj) = {
 
   }
 }

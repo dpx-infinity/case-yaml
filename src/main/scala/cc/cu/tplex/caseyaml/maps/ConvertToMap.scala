@@ -12,29 +12,29 @@ import scala.collection.JavaConverters
 object ConvertToMap {
   import JavaConverters._
 
-  def convert[T](entity: YEntity[T], obj: T): Any = entity match {
-    case YNullable(valueEntity: YEntity[Any]) => convertNullable(valueEntity, obj)
-    case YString => convertString(checkNull(obj, entity))
-    case YBoolean => convertBoolean(checkNull(obj, entity))
-    case ic: YIntCompatible[T] => convertInt(ic, checkNull(obj, ic))
-    case fc: YFloatCompatible[T] => convertFloat(fc, checkNull(obj, fc))
-    case m: YMap[Any] => convertMap(m, checkNull(obj, m))
-    case l: YList[Any] => convertList(l, checkNull(obj, l))
-    case YStringConverted(to: Function1[T, String], _) => to(obj)
-    case cm: YClassMap[T] =>
-      if (cm.clazz.isInstance(obj)) convertClassMap(cm, checkNull(obj, cm))
+  def convert[Obj, Yml](entity: YEntity[Obj, Yml], obj: Obj): Yml = entity match {
+    case yn: YNullable[Obj, Yml] => convertNullable[Obj, Yml](yn.entity, obj)
+    case ys: YString.type => convertString(checkNull(ys, obj))
+    case yb: YBoolean.type => convertBoolean(checkNull(yb, obj))
+    case ic: YIntCompatible[Obj] => convertInt(ic, checkNull(ic, obj))
+    case fc: YFloatCompatible[Obj] => convertFloat(fc, checkNull(fc, obj))
+    case m: YMap[o, y] => convertMap(m, checkNull(m, obj))
+    case l: YList[o, y] => convertList(l, checkNull(l, obj))
+    case YStringConverted(to: Function1[Obj, String], _) => to(obj)
+    case cm: YClassMap[Obj] =>
+      if (cm.clazz.isInstance(obj)) convertClassMap(cm, checkNull(cm, obj))
       else throw CaseYamlException(s"Expected ${cm.clazz.getName}, got ${obj.getClass.getName}")
-    case _: YOptional[_] =>
+    case _: YOptional[_, _] =>
       throw CaseYamlException("YOptional is not applicable outside of YClassMap")
   }
 
-  def checkNull[T](obj: T, entity: YEntity[T]): T = obj match {
+  def checkNull[Obj, Yml](entity: YEntity[Obj, Yml], obj: Obj): Obj = obj match {
     case null => throw CaseYamlException(s"Expected ${entity.objReprName}, got null")
     case _ => obj
   }
 
-  def convertNullable[T](entity: YEntity[T], obj: T) = obj match {
-    case null => null
+  def convertNullable[Obj, Yml](entity: YEntity[Obj, Yml], obj: Obj): Yml = obj match {
+    case null => null.asInstanceOf[Yml]
     case _ => convert(entity, obj)
   }
 
@@ -48,45 +48,39 @@ object ConvertToMap {
     case _ => throw CaseYamlException("Expected boolean, got " + obj.getClass.getName)
   }
 
-  def convertMap[T, E](entity: YMap[E], obj: T): java.util.Map[String, Any] = obj match {
-    case m: Map[String, E] => m.mapValues(v => convert(entity.valueEntity, v)).asJava
+  def convertMap[Obj, Yml, T](entity: YMap[Obj, Yml], obj: T): java.util.Map[String, Yml] = obj match {
+    case m: Map[String, Obj] => m.mapValues(v => convert(entity.valueEntity, v)).asJava
     case _ => throw CaseYamlException(s"Expected ${entity.objReprName}, got ${obj.getClass.getName}")
   }
 
-  def convertList[T, E](entity: YList[E], obj: T): java.util.List[Any] = obj match {
-    case s: Seq[E] => s.map(v => convert(entity.valueEntity, v)).asJava
+  def convertList[Obj, Yml, T](entity: YList[Obj, Yml], obj: T): java.util.List[Yml] = obj match {
+    case s: Seq[Obj] => s.map(v => convert(entity.valueEntity, v)).asJava
     case _ => throw CaseYamlException(s"Expected ${entity.objReprName}, got ${obj.getClass.getName}")
   }
 
   def convertClassMap[T](cm: YClassMap[T], obj: T): java.util.Map[String, Any] =
     cm.entries.map {
       case SkipField(_) => None
-      case entry =>
-        val (entity, possibleValue) = entry.entity match {
-          case yo: YOptional[_] => yo.entity -> (entry.field(obj).get match {
-            case Some(value) => Some(value)
+      case entry: YEntry[T, o, y] =>
+        val (entity: YEntity[`o`, `y`], possibleValue: Option[`o`]) = entry.entity match {
+          case yo: YOptional[o, y] => yo.entity -> (entry.field(obj).get match {
+            case Some(value: o) => Some(value)
             case None => None
             case null => throw CaseYamlException(s"Expected ${yo.objReprName}, got null")
             case other => throw CaseYamlException(s"Expected ${yo.objReprName}, got " + other.getClass.getName)
           })
           case _ => entry.entity -> Some(entry.field(obj).get)
         }
-        possibleValue map { value => entry.name -> convert(entity, value) }
+        possibleValue map { value => entry.name -> convert[o, y](entity, value) }
     }.flatten.toMap.asJava
 
-  def convertInt[T](ic: YIntCompatible[T], obj: T): Any = obj match {
-    case byte: Byte => byte.toInt
-    case short: Short => short.toInt
-    case int: Int => int
-    case long: Long => long
-    case bigint: BigInt => bigint.bigInteger
+  def convertInt[Obj](ic: YIntCompatible[Obj], obj: Obj): Number = obj match {
+    case _: Byte | _: Short | _: Int | _: Long | _: BigInt => ic.toYml(obj)
     case _ => throw CaseYamlException(s"Expected ${ic.objReprName}, got ${obj.getClass.getName}")
   }
 
-  def convertFloat[T](fc: YFloatCompatible[T], obj: Any): Any = obj match {
-    case float: Float => float
-    case double: Double => double
-    case bigdec: BigDecimal => bigdec.bigDecimal
+  def convertFloat[Obj](fc: YFloatCompatible[Obj], obj: Obj): Number = obj match {
+    case _: Float | _: Double | _: BigDecimal => fc.toYml(obj)
     case _ => throw CaseYamlException(s"Expected ${fc.objReprName}, got ${obj.getClass.getName}")
   }
 }

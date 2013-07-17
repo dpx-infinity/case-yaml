@@ -13,7 +13,7 @@ package object model {
   case class NamedField(name: String, fieldName: String)
 
   implicit class NamedField2EntryWrapper(val namedField: NamedField) extends AnyVal {
-    def -->[T: TypeTag : ClassTag, S](entity: YEntity[S]): YEntry[T, S] = {
+    def -->[T: TypeTag : ClassTag, Obj, Yml](entity: YEntity[Obj, Yml]): YEntry[T, Obj, Yml] = {
       val fsym = typeOf[T].declaration(namedField.fieldName: TermName).asTerm
       def fieldGetter(obj: T) = {
         val im = typeTag[T].mirror.reflect(obj)
@@ -30,9 +30,10 @@ package object model {
     def ~>(name: String) = NamedField(name, fieldName)
   }
 
-  def skipField[T] = SkipField[T]()
+  def skipField[T, Obj, Yml] = SkipField[T, Obj, Yml]()
 
   implicit class AsEntityWrapper(val obj: Any) extends AnyVal {
-    def as[T](entity: YEntity[T]): T = entity.of(obj)
+    def asYmlOf[Obj, Yml](entity: YEntity[Obj, Yml]): Yml = obj.asInstanceOf[Yml]
+    def asObjOf[Obj, Yml](entity: YEntity[Obj, Yml]): Obj = obj.asInstanceOf[Obj]
   }
 }

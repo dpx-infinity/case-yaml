@@ -29,7 +29,7 @@ object ConvertFromMap {
   }
 
   def checkNull[T](obj: T, entity: YEntity[T]): T = obj match {
-    case null => throw CaseYamlException(s"Expected ${entity.mapReprName}, got null")
+    case null => throw CaseYamlException(s"Expected ${entity.ymlReprName}, got null")
     case _ => obj
   }
 
@@ -52,22 +52,22 @@ object ConvertFromMap {
     case int: Int => entity.fromInt(int)
     case long: Long => entity.fromLong(long)
     case bigint: java.math.BigInteger => entity.fromBigInt(bigint)
-    case _ => throw CaseYamlException(s"Expected ${entity.mapReprName}, got ${src.getClass.getName}")
+    case _ => throw CaseYamlException(s"Expected ${entity.ymlReprName}, got ${src.getClass.getName}")
   }
 
   def convertFloat[T](entity: YFloatCompatible[T], src: Any): T = src match {
     case double: Double => entity.fromDouble(double)
-    case _ => throw CaseYamlException(s"Expected ${entity.mapReprName}, got ${src.getClass.getName}")
+    case _ => throw CaseYamlException(s"Expected ${entity.ymlReprName}, got ${src.getClass.getName}")
   }
 
   def convertMap[T](entity: YMap[T], src: Any): Map[String, T] = src match {
     case map: java.util.Map[String, _] => map.asScala.mapValues(v => convert(entity.valueEntity, v)).toMap
-    case _ => throw CaseYamlException(s"Expected ${entity.mapReprName}, got ${src.getClass.getName}")
+    case _ => throw CaseYamlException(s"Expected ${entity.ymlReprName}, got ${src.getClass.getName}")
   }
 
   def convertList[T](entity: YList[T], src: Any): Seq[T] = src match {
     case list: java.util.List[T] => list.asScala.map(v => convert(entity.valueEntity, v)).toVector
-    case _ => throw CaseYamlException(s"Expected ${entity.mapReprName}, got ${src.getClass.getName}")
+    case _ => throw CaseYamlException(s"Expected ${entity.ymlReprName}, got ${src.getClass.getName}")
   }
 
   def convertClassMap[T](cm: YClassMap[T], src: Any): T = src match {
