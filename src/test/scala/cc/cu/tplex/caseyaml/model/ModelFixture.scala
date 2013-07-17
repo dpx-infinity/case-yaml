@@ -17,6 +17,7 @@ case class ProjectModel(id: ModelId,
 
 case class PluginModel(id: ModelId,
                        name: String,
+                       data: Option[BigDecimal],
                        dependencies: Seq[ModelId])
 
 object ModelFixture {
@@ -31,6 +32,7 @@ object ModelFixture {
     "plugins"    --> YMap(YClassMap[PluginModel](
       "id"                    --> modelId,
       "name" ~> "pluginName"  --> YString,
+      "data"                  --> YOptional(YFloatCompatible.YBigDecimal),
       "dependencies"          --> YList(modelId)
     ))
   )
@@ -45,7 +47,14 @@ object ModelFixture {
       "plugin1" -> PluginModel(
         ModelId("id"),
         "name",
+        None,
         Seq(ModelId("id1"), ModelId("id2"))
+      ),
+      "plugin2" -> PluginModel(
+        ModelId("id2"),
+        "name2",
+        Some(123.45),
+        Seq.empty
       )
     )
   )

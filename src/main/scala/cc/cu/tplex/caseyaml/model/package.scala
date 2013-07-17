@@ -31,4 +31,8 @@ package object model {
   }
 
   def skipField[T] = SkipField[T]()
+
+  implicit class AsEntityWrapper(val obj: Any) extends AnyVal {
+    def as[T](entity: YEntity[T]): T = entity.of(obj)
+  }
 }

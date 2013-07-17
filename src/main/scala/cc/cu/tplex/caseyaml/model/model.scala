@@ -4,7 +4,11 @@ import scala.reflect.runtime.universe._
 import scala.reflect.ClassTag
 import java.math.BigInteger
 
-sealed trait YEntity[+T]
+sealed trait YEntity[+T] {
+  def of(obj: Any): T = obj.asInstanceOf[T]
+  def objReprName: String
+  def mapReprName: String
+}
 
 sealed trait YEntry[T, +S] {
   def name: String
@@ -17,28 +21,56 @@ case class SkipField[T](name: String = null) extends YEntry[T, Nothing] {
   val entity = null
 }
 
-case class YClassMap[T: TypeTag : ClassTag](entries: YEntry[T, _]*) extends YEntity[T] {
+case class YClassMap[T: TypeTag](entries: YEntry[T, _]*) extends YEntity[T] {
   val clazz = typeTag[T].mirror runtimeClass typeOf[T]
   val ctormirror = {
     val classm = typeTag[T].mirror reflectClass typeOf[T].typeSymbol.asClass
     classm reflectConstructor typeOf[T].declaration(nme.CONSTRUCTOR).asMethod
   }
+  val objReprName = clazz.getName
+  val mapReprName = "map for " + clazz.getName
 }
 
-case class YMap[T](valueEntity: YEntity[T]) extends YEntity[Map[String, T]]
-case class YList[T](entity: YEntity[T]) extends YEntity[Seq[T]]
+case class YMap[T](valueEntity: YEntity[T]) extends YEntity[Map[String, T]] {
+  val objReprName = s"map from string to ${valueEntity.objReprName}"
+  val mapReprName = s"java.util.Map from string to ${valueEntity.mapReprName}"
+}
+case class YList[T](valueEntity: YEntity[T]) extends YEntity[Seq[T]] {
+  val objReprName = s"list of ${valueEntity.objReprName}"
+  val mapReprName = s"java.util.List of ${valueEntity.mapReprName}"
+}
 
-case class YNullable[T <: AnyRef](entity: YEntity[T]) extends YEntity[T]
+case class YNullable[T <: AnyRef](entity: YEntity[T]) extends YEntity[T] {
+  val objReprName = s"nullable ${entity.objReprName}"
+  val mapReprName = s"nullable ${entity.mapReprName}"
+}
 
-case class YStringConverted[T](toStr: T => String, fromStr: String => T) extends YEntity[T]
+case class YOptional[T](entity: YEntity[T]) extends YEntity[Option[T]] {
+  val objReprName = s"optional ${entity.objReprName}"
+  val mapReprName = s"optional ${entity.mapReprName}"
+}
 
-case object YString extends YEntity[String]
-case object YBoolean extends YEntity[Boolean]
+case class YStringConverted[T: ClassTag](toStr: T => String, fromStr: String => T) extends YEntity[T] {
+  val objReprName = s"string for ${implicitly[ClassTag[T]].runtimeClass.getName}"
+  val mapReprName = objReprName
+}
+
+case object YString extends YEntity[String] {
+  val objReprName = "string"
+  val mapReprName = objReprName
+}
+case object YBoolean extends YEntity[Boolean] {
+  val objReprName = "boolean"
+  val mapReprName = objReprName
+}
 
 sealed trait YIntCompatible[T] extends YEntity[T] {
   def fromInt(int: Int): T
   def fromLong(long: Long): T
   def fromBigInt(bigint: java.math.BigInteger): T
+
+  val objReprName = "int-compatible type"
+  val mapReprName = "int, long or java.math.BigInteger"
 }
 object YIntCompatible {
   case object YByte extends YIntCompatible[Byte] {
@@ -74,6 +106,9 @@ object YIntCompatible {
 
 sealed trait YFloatCompatible[T] extends YEntity[T] {
   def fromDouble(double: Double): T
+
+  val objReprName = "float-compatible type"
+  val mapReprName = "double"
 }
 object YFloatCompatible {
   case object YFloat extends YFloatCompatible[Float] {
