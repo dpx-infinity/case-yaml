@@ -14,7 +14,7 @@
  * limitations under the License.
  ******************************************************************************/
 
-package cc.cu.tplex.caseyaml.maps
+package cc.cu.tplex.caseyaml.yml
 
 import org.scalatest.FlatSpec
 import cc.cu.tplex.caseyaml.model._

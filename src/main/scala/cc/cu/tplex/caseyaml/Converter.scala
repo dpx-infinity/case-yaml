@@ -20,7 +20,7 @@ import cc.cu.tplex.caseyaml.model.YEntity
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
 import java.io._
-import cc.cu.tplex.caseyaml.maps.{ConvertToObj, ConvertToYml}
+import cc.cu.tplex.caseyaml.yml.{ConvertToObj, ConvertToYml}
 import java.nio.charset.Charset
 import cc.cu.tplex.caseyaml.Converter.{Deserializer, Serializer}
 import org.yaml.snakeyaml.error.YAMLException

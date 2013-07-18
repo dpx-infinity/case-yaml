@@ -20,7 +20,7 @@ import cc.cu.tplex.caseyaml.model.YEntity
 
 /** Library entry point, contain methods which return intermediate objects which perform [de]serialization. */
 object CaseYaml {
-  /** Same as [[cc.cu.tplex.caseyaml.CaseYaml.apply[Obj,Yml](YEntity[Obj,Yml]):Converter[Obj,Yml] forEntity]],
+  /** Same as [[cc.cu.tplex.caseyaml.CaseYaml#apply]],
     * returns an intermediate object, [[cc.cu.tplex.caseyaml.Converter]], which provides very small DSL for
     * [de]serialization.
     *
@@ -31,7 +31,7 @@ object CaseYaml {
     */
   def forEntity[Obj, Yml](entity: YEntity[Obj, Yml]) = new Converter(entity)
 
-  /** Same as [[cc.cu.tplex.caseyaml.CaseYaml.forEntity[Obj,Yml](YEntity[Obj,Yml]):Converter[Obj,Yml] forEntity]],
+  /** Same as [[cc.cu.tplex.caseyaml.CaseYaml#forEntity]],
     * returns an intermediate object, [[cc.cu.tplex.caseyaml.Converter]], which provides very small DSL for
     * [de]serialization.
     *
