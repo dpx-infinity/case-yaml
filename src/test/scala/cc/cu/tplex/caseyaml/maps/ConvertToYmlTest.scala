@@ -12,21 +12,21 @@ import cc.cu.tplex.caseyaml.CaseYamlException
  *
  * @author Vladimir Matveev
  */
-class ConvertToMapTest extends FlatSpec with ShouldMatchers {
-  "ConvertToMap.convert" should "serialize int-compatible values directly (upcasting to int if necessary)" in {
+class ConvertToYmlTest extends FlatSpec with ShouldMatchers {
+  "ConvertToYml" should "serialize int-compatible values directly (upcasting to int if necessary)" in {
     val byte: Byte = 1
     val short: Short = 2
     val int: Int = 3
     val long: Long = 4
     val bigint: BigInt = 5
 
-    import ConvertToMap.convert
+    import ConvertToYml.apply
 
-    convert(YIntCompatible.YByte, byte) should equal (1: Byte)
-    convert(YIntCompatible.YShort, short) should equal (2: Short)
-    convert(YIntCompatible.YInt, int) should equal (3: Int)
-    convert(YIntCompatible.YLong, long) should equal (4: Long)
-    convert(YIntCompatible.YBigInt, bigint) should equal (java.math.BigInteger.valueOf(5))
+    apply(YIntCompatible.YByte, byte) should equal (1: Byte)
+    apply(YIntCompatible.YShort, short) should equal (2: Short)
+    apply(YIntCompatible.YInt, int) should equal (3: Int)
+    apply(YIntCompatible.YLong, long) should equal (4: Long)
+    apply(YIntCompatible.YBigInt, bigint) should equal (java.math.BigInteger.valueOf(5))
   }
 
   implicit class EntityConvertible(obj: YEntity[_, _]) {
@@ -35,45 +35,45 @@ class ConvertToMapTest extends FlatSpec with ShouldMatchers {
 
   it should "throw an exception when serializing int-incompatible type as int-compatible" in {
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YIntCompatible.YByte.as[Boolean, Any], true)
+      ConvertToYml(YIntCompatible.YByte.as[Boolean, Any], true)
     }.message should equal ("Expected int-compatible type, got java.lang.Boolean")
 
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YIntCompatible.YShort.as[Array[Char], Any], Array('a'))
+      ConvertToYml(YIntCompatible.YShort.as[Array[Char], Any], Array('a'))
     }.message should equal ("Expected int-compatible type, got [C")
 
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YIntCompatible.YInt.as[String, Any], "abc")
+      ConvertToYml(YIntCompatible.YInt.as[String, Any], "abc")
     }.message should equal ("Expected int-compatible type, got java.lang.String")
 
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YIntCompatible.YLong.as[Double, Any], 10.2: Double)
+      ConvertToYml(YIntCompatible.YLong.as[Double, Any], 10.2: Double)
     }.message should equal ("Expected int-compatible type, got java.lang.Double")
 
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YIntCompatible.YBigInt.as[Vector[Long], Any], Vector.empty[Long])
+      ConvertToYml(YIntCompatible.YBigInt.as[Vector[Long], Any], Vector.empty[Long])
     }.message should equal ("Expected int-compatible type, got scala.collection.immutable.Vector")
   }
 
   it should "throw an exception when serializing null as int-compatible type" in {
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YIntCompatible.YByte.as[Any, Number], null)
+      ConvertToYml(YIntCompatible.YByte.as[Any, Number], null)
     }.message should equal ("Expected int-compatible type, got null")
 
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YIntCompatible.YShort.as[Any, Number], null)
+      ConvertToYml(YIntCompatible.YShort.as[Any, Number], null)
     }.message should equal ("Expected int-compatible type, got null")
 
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YIntCompatible.YInt.as[Any, Number], null)
+      ConvertToYml(YIntCompatible.YInt.as[Any, Number], null)
     }.message should equal ("Expected int-compatible type, got null")
 
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YIntCompatible.YLong.as[Any, Number], null)
+      ConvertToYml(YIntCompatible.YLong.as[Any, Number], null)
     }.message should equal ("Expected int-compatible type, got null")
 
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YIntCompatible.YBigInt, null)
+      ConvertToYml(YIntCompatible.YBigInt, null)
     }.message should equal ("Expected int-compatible type, got null")
   }
 
@@ -82,78 +82,78 @@ class ConvertToMapTest extends FlatSpec with ShouldMatchers {
     val double: Double = 2.2
     val bigdec: BigDecimal = 3.3
 
-    import ConvertToMap.convert
+    import ConvertToYml.apply
 
-    convert(YFloatCompatible.YFloat, float) should equal (1.1.toFloat)
-    convert(YFloatCompatible.YDouble, double) should equal (2.2: Double)
-    convert(YFloatCompatible.YBigDecimal, bigdec) should equal (java.math.BigDecimal.valueOf(3.3))
+    apply(YFloatCompatible.YFloat, float) should equal (1.1.toFloat)
+    apply(YFloatCompatible.YDouble, double) should equal (2.2: Double)
+    apply(YFloatCompatible.YBigDecimal, bigdec) should equal (java.math.BigDecimal.valueOf(3.3))
   }
 
   it should "throw an exception when serializing float-incompatible type as float-compatible" in {
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YFloatCompatible.YFloat.as[String, Any], "abc")
+      ConvertToYml(YFloatCompatible.YFloat.as[String, Any], "abc")
     }.message should equal ("Expected float-compatible type, got java.lang.String")
 
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YFloatCompatible.YDouble.as[Long, Any], 10: Long)
+      ConvertToYml(YFloatCompatible.YDouble.as[Long, Any], 10: Long)
     }.message should equal ("Expected float-compatible type, got java.lang.Long")
 
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YFloatCompatible.YBigDecimal.as[Boolean, Any], false)
+      ConvertToYml(YFloatCompatible.YBigDecimal.as[Boolean, Any], false)
     }.message should equal ("Expected float-compatible type, got java.lang.Boolean")
   }
 
   it should "throw an exception when serializing null as float-compatible type" in {
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YFloatCompatible.YFloat.as[Any, Number], null)
+      ConvertToYml(YFloatCompatible.YFloat.as[Any, Number], null)
     }.message should equal ("Expected float-compatible type, got null")
 
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YFloatCompatible.YDouble.as[Any, Number], null)
+      ConvertToYml(YFloatCompatible.YDouble.as[Any, Number], null)
     }.message should equal ("Expected float-compatible type, got null")
 
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YFloatCompatible.YBigDecimal, null)
+      ConvertToYml(YFloatCompatible.YBigDecimal, null)
     }.message should equal ("Expected float-compatible type, got null")
   }
 
   it should "serialize strings directly" in {
-    ConvertToMap.convert(YString, "abcd") should equal ("abcd")
+    ConvertToYml(YString, "abcd") should equal ("abcd")
   }
 
   it should "throw an exception when serializing non-string object as a string" in {
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YString.as[Int, Any], 10: Int)
+      ConvertToYml(YString.as[Int, Any], 10: Int)
     }.message should equal ("Expected string, got java.lang.Integer")
   }
 
   it should "throw an exception when serializing null as a string" in {
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YString, null)
+      ConvertToYml(YString, null)
     }.message should equal ("Expected string, got null")
   }
 
   it should "serialize booleans directly" in {
-    ConvertToMap.convert(YBoolean, true) should equal (true)
-    ConvertToMap.convert(YBoolean, false) should equal (false)
+    ConvertToYml(YBoolean, true) should equal (true)
+    ConvertToYml(YBoolean, false) should equal (false)
   }
 
   it should "throw an exception when serializing non-boolean object as a boolean" in {
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YBoolean.as[String, Any], "abcd")
+      ConvertToYml(YBoolean.as[String, Any], "abcd")
     }.message should equal ("Expected boolean, got java.lang.String")
   }
 
   it should "throw an exception when serializing null as a boolean" in {
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YBoolean.as[Any, Any], null)
+      ConvertToYml(YBoolean.as[Any, Any], null)
     }.message should equal ("Expected boolean, got null")
   }
 
   it should "serialize an implementation of Map[String, ?] as java.util.Map[String, ?]" in {
     val m: Map[String, Int] = HashMap("a" -> 1, "b" -> 2, "c" -> 3)
 
-    val rm = ConvertToMap.convert(YMap(YIntCompatible.YInt), m).asInstanceOf[java.util.Map[String, Int]]
+    val rm = ConvertToYml(YMap(YIntCompatible.YInt), m).asInstanceOf[java.util.Map[String, Int]]
     rm should have size 3
     rm.get("a") should equal (1)
     rm.get("b") should equal (2)
@@ -162,24 +162,24 @@ class ConvertToMapTest extends FlatSpec with ShouldMatchers {
 
   it should "throw an exception when serializing non-Map object as java.util.Map" in {
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YMap(YList(YString)).as[String, Any], "abcd")
+      ConvertToYml(YMap(YList(YString)).as[String, Any], "abcd")
     }.message should equal ("Expected map from string to list of string, got java.lang.String")
 
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YMap(YNullable(YIntCompatible.YBigInt)).as[Array[BigInt], Any], Array.empty[BigInt])
+      ConvertToYml(YMap(YNullable(YIntCompatible.YBigInt)).as[Array[BigInt], Any], Array.empty[BigInt])
     }.message should equal ("Expected map from string to nullable int-compatible type, got [Lscala.math.BigInt;")
   }
 
   it should "throw an exception when serializing null as java.util.Map" in {
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YMap(YString), null)
+      ConvertToYml(YMap(YString), null)
     }.message should equal ("Expected map from string to string, got null")
   }
 
   it should "serialize an implementation of Seq[?] as java.util.List[?]" in {
     val list = List(1.1, 1.2, 1.3)
 
-    val rm = ConvertToMap.convert(YList(YFloatCompatible.YDouble), list).asInstanceOf[java.util.List[Double]]
+    val rm = ConvertToYml(YList(YFloatCompatible.YDouble), list).asInstanceOf[java.util.List[Double]]
     rm should have size 3
     rm.get(0) should equal (1.1)
     rm.get(1) should equal (1.2)
@@ -188,34 +188,33 @@ class ConvertToMapTest extends FlatSpec with ShouldMatchers {
 
   it should "throw an exception when serializing null as java.util.List" in {
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YList(YString), null)
+      ConvertToYml(YList(YString), null)
     }.message should equal ("Expected list of string, got null")
   }
 
   it should "allow null values to be serialized for nullable entity" in {
-    ConvertToMap.convert(YNullable(YString), null)                      should be (null)
-    ConvertToMap.convert(YNullable(YIntCompatible.YBigInt), null)       should be (null)
-    ConvertToMap.convert(YNullable(YFloatCompatible.YBigDecimal), null) should be (null)
-    ConvertToMap.convert(YNullable(YMap(YString)), null)                should be (null)
-    ConvertToMap.convert(YNullable(YList(ModelFixture.yentity)), null)  should be (null)
-    ConvertToMap.convert(YNullable(ModelFixture.yentity), null)         should be (null)
+    ConvertToYml(YNullable(YString), null)                      should be (null)
+    ConvertToYml(YNullable(YIntCompatible.YBigInt), null)       should be (null)
+    ConvertToYml(YNullable(YFloatCompatible.YBigDecimal), null) should be (null)
+    ConvertToYml(YNullable(YMap(YString)), null)                should be (null)
+    ConvertToYml(YNullable(YList(ModelFixture.yentity)), null)  should be (null)
+    ConvertToYml(YNullable(ModelFixture.yentity), null)         should be (null)
   }
 
   it should "throw an exception when serializing YOptional outside of YClassMap" in {
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YOptional(YString), Option("123"))
+      ConvertToYml(YOptional(YString), Option("123"))
     }.message should equal ("YOptional is not applicable outside of YClassMap")
   }
 
   it should "allow null values for YStringConverted" in {
     val ysc = YStringConverted[String](s => if (s == null) "<null>" else s, s => s)
-    ConvertToMap.convert(ysc, "abc") should equal ("abc")
-    ConvertToMap.convert(ysc, null) should equal ("<null>")
+    ConvertToYml(ysc, "abc") should equal ("abc")
+    ConvertToYml(ysc, null) should equal ("<null>")
   }
 
   it should "serialize an object to a java.util.Map/java.util.List tree using YClassMap tree" in {
-    val m = ConvertToMap
-      .convert(ModelFixture.yentity, ModelFixture.model)
+    val m = ConvertToYml(ModelFixture.yentity, ModelFixture.model)
       .asInstanceOf[java.util.Map[String, Any]]
 
     m should have size 6
@@ -254,13 +253,13 @@ class ConvertToMapTest extends FlatSpec with ShouldMatchers {
 
   it should "throw an exception when an object of incorrect class is serialized using YClassMap" in {
     intercept[CaseYamlException] {
-      ConvertToMap.convert(ModelFixture.yentity.as[String, Any], "abcd")
+      ConvertToYml(ModelFixture.yentity.as[String, Any], "abcd")
     }.message should equal ("Expected cc.cu.tplex.caseyaml.model.ProjectModel, got java.lang.String")
   }
 
   it should "throw an exception when null is serialized using YClassMap" in {
     intercept[CaseYamlException] {
-      ConvertToMap.convert(ModelFixture.yentity, null)
+      ConvertToYml(ModelFixture.yentity, null)
     }.message should equal ("Expected cc.cu.tplex.caseyaml.model.ProjectModel, got null")
   }
 }

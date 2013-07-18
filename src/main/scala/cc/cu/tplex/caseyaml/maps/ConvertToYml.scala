@@ -9,10 +9,10 @@ import scala.collection.JavaConverters
  * Date: 15.07.13
  * Time: 11:06
  */
-object ConvertToMap {
+object ConvertToYml {
   import JavaConverters._
 
-  def convert[Obj, Yml](entity: YEntity[Obj, Yml], obj: Obj): Yml = entity match {
+  def apply[Obj, Yml](entity: YEntity[Obj, Yml], obj: Obj): Yml = entity match {
     case yn: YNullable[Obj, Yml] => convertNullable[Obj, Yml](yn.entity, obj)
     case ys: YString.type => convertString(checkNull(ys, obj))
     case yb: YBoolean.type => convertBoolean(checkNull(yb, obj))
@@ -35,7 +35,7 @@ object ConvertToMap {
 
   def convertNullable[Obj, Yml](entity: YEntity[Obj, Yml], obj: Obj): Yml = obj match {
     case null => null.asInstanceOf[Yml]
-    case _ => convert(entity, obj)
+    case _ => apply(entity, obj)
   }
 
   def convertString[T](obj: T): String = obj match {
@@ -59,12 +59,12 @@ object ConvertToMap {
   }
 
   def convertMap[Obj, Yml, T](entity: YMap[Obj, Yml], obj: T): java.util.Map[String, Yml] = obj match {
-    case m: Map[String, Obj] => m.mapValues(v => convert(entity.valueEntity, v)).asJava
+    case m: Map[String, Obj] => m.mapValues(v => apply(entity.valueEntity, v)).asJava
     case _ => throw CaseYamlException(s"Expected ${entity.objReprName}, got ${obj.getClass.getName}")
   }
 
   def convertList[Obj, Yml, T](entity: YList[Obj, Yml], obj: T): java.util.List[Yml] = obj match {
-    case s: Seq[Obj] => s.map(v => convert(entity.valueEntity, v)).asJava
+    case s: Seq[Obj] => s.map(v => apply(entity.valueEntity, v)).asJava
     case _ => throw CaseYamlException(s"Expected ${entity.objReprName}, got ${obj.getClass.getName}")
   }
 
@@ -80,7 +80,7 @@ object ConvertToMap {
           })
           case _ => entry.entity -> Some(entry.field(obj).get.asInstanceOf[o])
         }
-        possibleValue map { value => entry.name -> convert[o, y](entity, value) }
+        possibleValue map { value => entry.name -> apply[o, y](entity, value) }
     }.flatten.toMap.asJava
 }
 

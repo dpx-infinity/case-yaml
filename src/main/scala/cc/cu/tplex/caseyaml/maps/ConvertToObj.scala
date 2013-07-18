@@ -8,13 +8,13 @@ import scala.collection.JavaConverters
  * Date: 15.07.13
  * Time: 11:08
  */
-object ConvertFromMap {
+object ConvertToObj {
   import JavaConverters._
 
-  def convert[Obj, Yml](entity: YEntity[Obj, Yml], obj: java.util.Map[String, Any], key: String): Obj =
-    convert(entity, obj.get(key).asInstanceOf[Yml])
+  def apply[Obj, Yml](entity: YEntity[Obj, Yml], obj: java.util.Map[String, Any], key: String): Obj =
+    apply(entity, obj.get(key).asInstanceOf[Yml])
 
-  def convert[Obj, Yml](entity: YEntity[Obj, Yml], yml: Yml): Obj = entity match {
+  def apply[Obj, Yml](entity: YEntity[Obj, Yml], yml: Yml): Obj = entity match {
     case yn: YNullable[Obj, Yml] => convertNullable[Obj, Yml](yn.entity, yml)
     case ys: YString.type => convertString(checkNull(ys, yml))
     case yb: YBoolean.type => convertBoolean(checkNull(yb, yml))
@@ -35,7 +35,7 @@ object ConvertFromMap {
 
   def convertNullable[Obj, Yml](entity: YEntity[Obj, Yml], src: Yml): Obj = src match {
     case null => null.asInstanceOf[Obj]
-    case _ => convert(entity, src)
+    case _ => apply(entity, src)
   }
 
   def convertString[T](src: T): String = src match {
@@ -62,12 +62,12 @@ object ConvertFromMap {
   }
 
   def convertMap[Obj, Yml, T](entity: YMap[Obj, Yml], src: T): Map[String, Obj] = src match {
-    case map: java.util.Map[String, Yml] => map.asScala.mapValues(v => convert(entity.valueEntity, v)).toMap
+    case map: java.util.Map[String, Yml] => map.asScala.mapValues(v => apply(entity.valueEntity, v)).toMap
     case _ => throw CaseYamlException(s"Expected ${entity.ymlReprName}, got ${src.getClass.getName}")
   }
 
   def convertList[Obj, Yml, T](entity: YList[Obj, Yml], src: T): Seq[Obj] = src match {
-    case list: java.util.List[Yml] => list.asScala.map(v => convert(entity.valueEntity, v)).toVector
+    case list: java.util.List[Yml] => list.asScala.map(v => apply(entity.valueEntity, v)).toVector
     case _ => throw CaseYamlException(s"Expected ${entity.ymlReprName}, got ${src.getClass.getName}")
   }
 
@@ -77,10 +77,10 @@ object ConvertFromMap {
         case YFieldEntry(name, _, entity: YEntity[o, y]) =>
           entity match {
             case o: YOptional[io, `y`] =>
-              map.asScala.get(name).map { case value: y => convert(o.entity, value) }
+              map.asScala.get(name).map { case value: y => apply(o.entity, value) }
             case _ =>
               if (map.containsKey(name))
-                convert(entity, map.get(name).asInstanceOf[y])
+                apply(entity, map.get(name).asInstanceOf[y])
               else
                 throw CaseYamlException(s"Key '$name' is not present in ${cm.clazz.getName} class map")
           }
