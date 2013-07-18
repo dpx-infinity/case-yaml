@@ -18,12 +18,27 @@ package cc.cu.tplex.caseyaml
 
 import cc.cu.tplex.caseyaml.model.YEntity
 
-/**
- * Date: 13.07.13
- * Time: 21:34
- *
- * @author Vladimir Matveev
- */
+/** Library entry point, contain methods which return intermediate objects which perform [de]serialization. */
 object CaseYaml {
+  /** Same as [[cc.cu.tplex.caseyaml.CaseYaml.apply[Obj,Yml](YEntity[Obj,Yml]):Converter[Obj,Yml] forEntity]],
+    * returns an intermediate object, [[cc.cu.tplex.caseyaml.Converter]], which provides very small DSL for
+    * [de]serialization.
+    *
+    * @param entity a description of the object which will be [de]serialized via the converter
+    * @tparam Obj type of the object
+    * @tparam Yml type of the YAML representation (usually [[java.util.Map]][String, Any] for classes
+    * @return a converter for `entity` descriptor
+    */
   def forEntity[Obj, Yml](entity: YEntity[Obj, Yml]) = new Converter(entity)
+
+  /** Same as [[cc.cu.tplex.caseyaml.CaseYaml.forEntity[Obj,Yml](YEntity[Obj,Yml]):Converter[Obj,Yml] forEntity]],
+    * returns an intermediate object, [[cc.cu.tplex.caseyaml.Converter]], which provides very small DSL for
+    * [de]serialization.
+    *
+    * @param entity a description of the object which will be [de]serialized via the converter
+    * @tparam Obj type of the object
+    * @tparam Yml type of the YAML representation (usually [[java.util.Map]][String, Any] for classes
+    * @return a converter for `entity` descriptor
+    */
+  def apply[Obj, Yml](entity: YEntity[Obj, Yml]) = new Converter(entity)
 }

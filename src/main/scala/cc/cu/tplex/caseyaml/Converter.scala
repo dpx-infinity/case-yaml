@@ -19,6 +19,11 @@ package cc.cu.tplex.caseyaml
 import cc.cu.tplex.caseyaml.model.YEntity
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
+import java.io._
+import cc.cu.tplex.caseyaml.maps.{ConvertToObj, ConvertToYml}
+import java.nio.charset.Charset
+import cc.cu.tplex.caseyaml.Converter.{Deserializer, Serializer}
+import org.yaml.snakeyaml.error.YAMLException
 
 /**
  * Date: 13.07.13
@@ -29,7 +34,75 @@ import org.yaml.snakeyaml.constructor.SafeConstructor
 class Converter[Obj, Yml] private[caseyaml] (entity: YEntity[Obj, Yml], yaml: Yaml = new Yaml(new SafeConstructor)) {
   def withYaml(yaml: Yaml) = new Converter(entity, yaml)
 
-  def serialize(obj: Obj) = {
+  def wrap[T](e: => T) = try {
+    e
+  } catch {
+    case e: YAMLException => throw CaseYamlException("YAML [de]serialization error", e)
+  }
 
+  def serialize(obj: Obj) = new Serializer {
+    def toStr = wrap(yaml.dump(obj))
+
+    def to(writer: Writer) {
+      wrap(yaml.dump(ConvertToYml(entity, obj), writer))
+    }
+  }
+
+  private abstract class BaseDeserializer extends Deserializer[Obj] {
+    def from(reader: Reader) = extractMap(wrap(yaml.load(reader)))
+
+    def from(string: String) = extractMap(wrap(yaml.load(string)))
+
+    protected def extractMap(obj: Any): Obj
+  }
+
+  def deserialize = new BaseDeserializer {
+    protected def extractMap(obj: Any) = ConvertToObj(entity, obj.asInstanceOf[Yml])
+  }
+
+  def deserialize(subkey: String) = new BaseDeserializer {
+    protected def extractMap(obj: Any) = ConvertToObj(entity, obj.asInstanceOf[java.util.Map[String, Any]], subkey)
+  }
+}
+
+object Converter {
+  trait Deserializer[Obj] {
+    def from(reader: Reader): Obj
+    def from(string: String): Obj
+
+    def from(stream: InputStream, charset: Charset = Charset.forName("UTF-8")): Obj =
+      from(new InputStreamReader(stream, charset))
+
+    def fromFile(file: File, charset: Charset = Charset.forName("UTF-8")): Obj =
+      from(new FileInputStream(file), charset)
+
+    def fromFile(path: String, charset: Charset = Charset.forName("UTF-8")): Obj =
+      fromFile(new File(path), charset)
+
+    def fromBytes(array: Array[Byte], charset: Charset = Charset.forName("UTF-8")): Obj =
+      from(new ByteArrayInputStream(array), charset)
+  }
+
+  trait Serializer {
+    def toStr: String
+    def to(writer: Writer)
+
+    def to(stream: OutputStream, charset: Charset = Charset.forName("UTF-8")) {
+      to(new OutputStreamWriter(stream ,charset))
+    }
+
+    def toFile(path: String, charset: Charset = Charset.forName("UTF-8")) {
+      toFile(new File(path), charset)
+    }
+
+    def toFile(file: File, charset: Charset = Charset.forName("UTF-8")) {
+      to(new FileOutputStream(file), charset)
+    }
+
+    def toBytes(charset: Charset = Charset.forName("UTF-8")): Array[Byte] = {
+      val stream = new ByteArrayOutputStream()
+      to(stream, charset)
+      stream.toByteArray
+    }
   }
 }
