@@ -4,7 +4,6 @@ import org.scalatest.FlatSpec
 import org.scalatest.matchers.ShouldMatchers
 import cc.cu.tplex.caseyaml.model._
 import cc.cu.tplex.caseyaml.test.CustomMatchers
-import cc.cu.tplex.caseyaml.CaseYamlException
 import java.util
 import cc.cu.tplex.caseyaml.CaseYamlException
 
@@ -14,8 +13,8 @@ import cc.cu.tplex.caseyaml.CaseYamlException
  */
 class ConvertFromMapTest extends FlatSpec with ShouldMatchers with CustomMatchers {
   "ConvertFromMap" should "deserialize int-compatible types with upcasting/downcasting, if needed" in {
-    val int: Int = 10
-    val long: Long = 20
+    val int: java.lang.Integer = 10
+    val long: java.lang.Long = 20
     val bigint: java.math.BigInteger = java.math.BigInteger.valueOf(30)
 
     ConvertFromMap.convert(YIntCompatible.YByte, int)      should (be (anInstanceOf[Byte])   and be === 10)
@@ -37,25 +36,29 @@ class ConvertFromMapTest extends FlatSpec with ShouldMatchers with CustomMatcher
     ConvertFromMap.convert(YIntCompatible.YBigInt, bigint) should (be (anInstanceOf[BigInt]) and be === 30)
   }
 
+  implicit class EntityConvertible(obj: YEntity[_, _]) {
+    def as[Obj, Yml] = obj.asInstanceOf[YEntity[Obj, Yml]]
+  }
+
   it should "throw an exception when int-incompatible object is deserialized as int-compatible" in {
     intercept[CaseYamlException] {
-      ConvertFromMap.convert(YIntCompatible.YByte, "abc")
+      ConvertFromMap.convert(YIntCompatible.YByte.as[Any, String], "abc")
     }.message should equal ("Expected int, long or java.math.BigInteger, got java.lang.String")
 
     intercept[CaseYamlException] {
-      ConvertFromMap.convert(YIntCompatible.YShort, 11.2)
+      ConvertFromMap.convert(YIntCompatible.YShort.as[Any, Double], 11.2)
     }.message should equal ("Expected int, long or java.math.BigInteger, got java.lang.Double")
 
     intercept[CaseYamlException] {
-      ConvertFromMap.convert(YIntCompatible.YInt, 12.3.toFloat)
+      ConvertFromMap.convert(YIntCompatible.YInt.as[Any, Float], 12.3.toFloat)
     }.message should equal ("Expected int, long or java.math.BigInteger, got java.lang.Float")
 
     intercept[CaseYamlException] {
-      ConvertFromMap.convert(YIntCompatible.YLong, Vector.empty)
+      ConvertFromMap.convert(YIntCompatible.YLong.as[Any, Vector[Any]], Vector.empty)
     }.message should equal ("Expected int, long or java.math.BigInteger, got scala.collection.immutable.Vector")
 
     intercept[CaseYamlException] {
-      ConvertFromMap.convert(YIntCompatible.YBigInt, new util.ArrayList[Long]())
+      ConvertFromMap.convert(YIntCompatible.YBigInt.as[Any, util.List[Long]], new util.ArrayList[Long]())
     }.message should equal ("Expected int, long or java.math.BigInteger, got java.util.ArrayList")
   }
 
@@ -82,7 +85,7 @@ class ConvertFromMapTest extends FlatSpec with ShouldMatchers with CustomMatcher
   }
 
   it should "deserialize float-compatible types with upcasting/downcasting, if needed" in {
-    val double: Double = 11.1
+    val double: java.lang.Double = 11.1
 
     ConvertFromMap.convert(YFloatCompatible.YFloat, double) should (
       be (anInstanceOf[Float]) and be === 11.1.toFloat
@@ -97,15 +100,15 @@ class ConvertFromMapTest extends FlatSpec with ShouldMatchers with CustomMatcher
 
   it should "throw an exception when float-incompatible object is deserialized as float-compatible" in {
     intercept[CaseYamlException] {
-      ConvertFromMap.convert(YFloatCompatible.YFloat, "abc")
+      ConvertFromMap.convert(YFloatCompatible.YFloat.as[Any, String], "abc")
     }.message should equal ("Expected double, got java.lang.String")
 
     intercept[CaseYamlException] {
-      ConvertFromMap.convert(YFloatCompatible.YDouble, 10: Int)
+      ConvertFromMap.convert(YFloatCompatible.YDouble.as[Any, Int], 10: Int)
     }.message should equal ("Expected double, got java.lang.Integer")
 
     intercept[CaseYamlException] {
-      ConvertFromMap.convert(YFloatCompatible.YBigDecimal, Vector.empty)
+      ConvertFromMap.convert(YFloatCompatible.YBigDecimal.as[Any, Vector[Any]], Vector.empty)
     }.message should equal ("Expected double, got scala.collection.immutable.Vector")
   }
 
@@ -130,11 +133,11 @@ class ConvertFromMapTest extends FlatSpec with ShouldMatchers with CustomMatcher
 
   it should "throw an exception when non-string object is deserialized as a string" in {
     intercept[CaseYamlException] {
-      ConvertFromMap.convert(YString, 123: Int)
+      ConvertFromMap.convert(YString.as[Any, Int], 123: Int)
     }.message should equal ("Expected string, got java.lang.Integer")
 
     intercept[CaseYamlException] {
-      ConvertFromMap.convert(YString, Array.empty[Char])
+      ConvertFromMap.convert(YString.as[Any, Array[Char]], Array.empty[Char])
     }.message should equal ("Expected string, got [C")
   }
 
@@ -145,17 +148,17 @@ class ConvertFromMapTest extends FlatSpec with ShouldMatchers with CustomMatcher
   }
 
   it should "deserialize booleans directly" in {
-    ConvertFromMap.convert(YBoolean, true) should equal (true)
-    ConvertFromMap.convert(YBoolean, false) should equal (false)
+    ConvertFromMap.convert(YBoolean, java.lang.Boolean.TRUE) should equal (true)
+    ConvertFromMap.convert(YBoolean, java.lang.Boolean.FALSE) should equal (false)
   }
 
   it should "throw an exception when non-boolean object is deserialized as a boolean" in {
     intercept[CaseYamlException] {
-      ConvertFromMap.convert(YBoolean, 0: Int)
+      ConvertFromMap.convert(YBoolean.as[Any, Int], 0: Int)
     }.message should equal ("Expected boolean, got java.lang.Integer")
 
     intercept[CaseYamlException] {
-      ConvertFromMap.convert(YBoolean, Array[Boolean](true, true, false))
+      ConvertFromMap.convert(YBoolean.as[Any, Array[Boolean]], Array(true, true, false))
     }.message should equal ("Expected boolean, got [Z")
   }
 
@@ -166,7 +169,7 @@ class ConvertFromMapTest extends FlatSpec with ShouldMatchers with CustomMatcher
   }
 
   it should "deserialize a map from string to other type with conversion" in {
-    val map = new util.HashMap[String, Any]()
+    val map = new util.HashMap[String, Number]()
     map.put("a", 11: Int)
     map.put("b", 12: Long)
     map.put("c", java.math.BigInteger.valueOf(13))
@@ -180,11 +183,11 @@ class ConvertFromMapTest extends FlatSpec with ShouldMatchers with CustomMatcher
 
   it should "throw an exception when not java.util.Map object is deserialized as a map" in {
     intercept[CaseYamlException] {
-      ConvertFromMap.convert(YMap(YIntCompatible.YInt), "avc")
+      ConvertFromMap.convert(YMap(YIntCompatible.YInt).as[Any, String], "avc")
     }.message should equal ("Expected java.util.Map from string to int, long or java.math.BigInteger, got java.lang.String")
 
     intercept[CaseYamlException] {
-      ConvertFromMap.convert(YMap(YBoolean), Array(10.toShort))
+      ConvertFromMap.convert(YMap(YBoolean).as[Any, Array[Short]], Array(10.toShort))
     }.message should equal ("Expected java.util.Map from string to boolean, got [S")
   }
 }

@@ -48,6 +48,16 @@ object ConvertToMap {
     case _ => throw CaseYamlException("Expected boolean, got " + obj.getClass.getName)
   }
 
+  def convertInt[Obj](ic: YIntCompatible[Obj], obj: Obj): Number = obj match {
+    case _: Byte | _: Short | _: Int | _: Long | _: BigInt => ic.toYml(obj)
+    case _ => throw CaseYamlException(s"Expected ${ic.objReprName}, got ${obj.getClass.getName}")
+  }
+
+  def convertFloat[Obj](fc: YFloatCompatible[Obj], obj: Obj): Number = obj match {
+    case _: Float | _: Double | _: BigDecimal => fc.toYml(obj)
+    case _ => throw CaseYamlException(s"Expected ${fc.objReprName}, got ${obj.getClass.getName}")
+  }
+
   def convertMap[Obj, Yml, T](entity: YMap[Obj, Yml], obj: T): java.util.Map[String, Yml] = obj match {
     case m: Map[String, Obj] => m.mapValues(v => convert(entity.valueEntity, v)).asJava
     case _ => throw CaseYamlException(s"Expected ${entity.objReprName}, got ${obj.getClass.getName}")
@@ -62,26 +72,16 @@ object ConvertToMap {
     cm.entries.map {
       case SkipField(_) => None
       case entry: YEntry[T, o, y] =>
-        val (entity: YEntity[`o`, `y`], possibleValue: Option[`o`]) = entry.entity match {
-          case yo: YOptional[o, y] => yo.entity -> (entry.field(obj).get match {
-            case Some(value: o) => Some(value)
+        val (entity, possibleValue) = entry.entity match {
+          case yo: YOptional[`o`, `y`] => yo.entity -> (entry.field(obj).get match {
+            case Some(value: `o`) => Some(value)
             case None => None
             case null => throw CaseYamlException(s"Expected ${yo.objReprName}, got null")
             case other => throw CaseYamlException(s"Expected ${yo.objReprName}, got " + other.getClass.getName)
           })
-          case _ => entry.entity -> Some(entry.field(obj).get)
+          case _ => entry.entity -> Some(entry.field(obj).get.asInstanceOf[o])
         }
         possibleValue map { value => entry.name -> convert[o, y](entity, value) }
     }.flatten.toMap.asJava
-
-  def convertInt[Obj](ic: YIntCompatible[Obj], obj: Obj): Number = obj match {
-    case _: Byte | _: Short | _: Int | _: Long | _: BigInt => ic.toYml(obj)
-    case _ => throw CaseYamlException(s"Expected ${ic.objReprName}, got ${obj.getClass.getName}")
-  }
-
-  def convertFloat[Obj](fc: YFloatCompatible[Obj], obj: Obj): Number = obj match {
-    case _: Float | _: Double | _: BigDecimal => fc.toYml(obj)
-    case _ => throw CaseYamlException(s"Expected ${fc.objReprName}, got ${obj.getClass.getName}")
-  }
 }
 

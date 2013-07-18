@@ -11,17 +11,18 @@ class YFieldEntryConversionsTest extends FlatSpec with ShouldMatchers {
       ModelFixture.yentity.entries
 
     id.field(model).get           should equal (ModelId("test"))
-      skip                          should equal (SkipField[ProjectModel]())
-      enabled.field(model).get      should equal (true)
-      count.field(model).get        should equal (10)
-      fraction.field(model).get     should equal (12.2)
+    skip                          should equal (skipField)
+    enabled.field(model).get      should equal (true)
+    count.field(model).get        should equal (10)
+    fraction.field(model).get     should equal (12.2)
 
     {
       val pluginsMap = plugins.field(model).get.asInstanceOf[Map[String, PluginModel]]
       pluginsMap should have size 2
 
       val Seq(id, name, data, dependencies) =
-        plugins.entity.asInstanceOf[YMap[PluginModel]].valueEntity.asInstanceOf[YClassMap[PluginModel]].entries
+        plugins.entity.asInstanceOf[YMap[PluginModel, java.util.Map[String, Any]]]
+          .valueEntity.asInstanceOf[YClassMap[PluginModel]].entries
 
       {
         val plugin = pluginsMap("plugin1")

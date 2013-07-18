@@ -27,7 +27,7 @@ case class YClassMap[Cls: TypeTag](entries: YEntry[Cls, _, _]*) extends YEntity[
     classm reflectConstructor typeOf[Cls].declaration(nme.CONSTRUCTOR).asMethod
   }
   val objReprName = clazz.getName
-  val ymlReprName = "map for " + clazz.getName
+  val ymlReprName = "java.util.Map from string to any for " + clazz.getName
 }
 
 case class YMap[Obj, Yml](valueEntity: YEntity[Obj, Yml])
@@ -93,7 +93,7 @@ object YIntCompatible {
   }
 
   case object YBigInt extends YIntCompatible[BigInt] {
-    def toYml(obj: BigInt) = obj
+    def toYml(obj: BigInt) = obj.bigInteger
     def toObj(yml: Number) = yml match {
       case bigint: java.math.BigInteger => bigint
       case other => BigInt(other.longValue())  // widest possible
@@ -120,7 +120,7 @@ object YFloatCompatible {
   }
 
   case object YBigDecimal extends YFloatCompatible[BigDecimal] {
-    def toYml(obj: BigDecimal) = obj
+    def toYml(obj: BigDecimal) = obj.bigDecimal
     def toObj(yml: Number) = yml match {
       case bigdec: java.math.BigDecimal => bigdec
       case other => BigDecimal(other.doubleValue())  // widest possible
