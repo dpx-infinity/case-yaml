@@ -24,8 +24,8 @@ object ModelFixture {
   val modelId = YStringConverted[ModelId](_.id, ModelId)
 
   val yentity = YClassMap[ProjectModel](
-    "id" --> modelId,
-    skipField,
+    "id"         --> modelId,
+    "name"       --> YString,
     "enabled"    --> YBoolean,
     "count"      --> YIntCompatible.YInt,
     "fraction"   --> YFloatCompatible.YDouble,

@@ -22,7 +22,7 @@ object ConvertToMap {
     case l: YList[o, y] => convertList(l, checkNull(l, obj))
     case YStringConverted(to: Function1[Obj, String], _) => to(obj)
     case cm: YClassMap[Obj] =>
-      if (cm.clazz.isInstance(obj)) convertClassMap(cm, checkNull(cm, obj))
+      if (obj == null || cm.clazz.isInstance(obj)) convertClassMap(cm, checkNull(cm, obj))
       else throw CaseYamlException(s"Expected ${cm.clazz.getName}, got ${obj.getClass.getName}")
     case _: YOptional[_, _] =>
       throw CaseYamlException("YOptional is not applicable outside of YClassMap")
@@ -70,7 +70,6 @@ object ConvertToMap {
 
   def convertClassMap[T](cm: YClassMap[T], obj: T): java.util.Map[String, Any] =
     cm.entries.map {
-      case SkipField(_) => None
       case entry: YEntry[T, o, y] =>
         val (entity, possibleValue) = entry.entity match {
           case yo: YOptional[`o`, `y`] => yo.entity -> (entry.field(obj).get match {

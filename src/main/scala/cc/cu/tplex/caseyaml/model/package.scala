@@ -30,8 +30,6 @@ package object model {
     def ~>(name: String) = NamedField(name, fieldName)
   }
 
-  def skipField[T, Obj, Yml] = SkipField[T, Obj, Yml]()
-
   implicit class AsEntityWrapper(val obj: Any) extends AnyVal {
     def asYmlOf[Obj, Yml](entity: YEntity[Obj, Yml]): Yml = obj.asInstanceOf[Yml]
     def asObjOf[Obj, Yml](entity: YEntity[Obj, Yml]): Obj = obj.asInstanceOf[Obj]

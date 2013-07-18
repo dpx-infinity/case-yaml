@@ -71,24 +71,21 @@ object ConvertFromMap {
     case _ => throw CaseYamlException(s"Expected ${entity.ymlReprName}, got ${src.getClass.getName}")
   }
 
-  def convertClassMap[T](cm: YClassMap[T], src: java.util.Map[String, Any]): T = src match {
+  def convertClassMap[Obj, T](cm: YClassMap[Obj], src: T): Obj = src match {
     case map: java.util.Map[String, Any] =>
       val ctorArgs = cm.entries.map {
-        case SkipField(_) => None
         case YFieldEntry(name, _, entity: YEntity[o, y]) =>
-          val (realEntity, possibleValue: Option[`y`]) = entity match {
-            case o: YOptional[`o`, `y`] => o.entity -> map.asScala.get(name)
+          entity match {
+            case o: YOptional[io, `y`] =>
+              map.asScala.get(name).map { case value: y => convert(o.entity, value) }
             case _ =>
-              entity -> (
-                if (map.containsKey(name))
-                  Some(map.get(name))
-                else
-                  throw CaseYamlException(s"Key '$name' is not present in ${cm.clazz.getName} class map")
-              )
+              if (map.containsKey(name))
+                convert(entity, map.get(name).asInstanceOf[y])
+              else
+                throw CaseYamlException(s"Key '$name' is not present in ${cm.clazz.getName} class map")
           }
-          possibleValue map (value => convert[o, y](realEntity, value))
-      }.flatten
-      cm.ctormirror(ctorArgs: _*).asInstanceOf[T]
+      }
+      cm.ctormirror(ctorArgs: _*).asInstanceOf[Obj]
 
     case _ => throw CaseYamlException(s"Expected ${cm.ymlReprName}, got " + src.getClass.getName)
   }

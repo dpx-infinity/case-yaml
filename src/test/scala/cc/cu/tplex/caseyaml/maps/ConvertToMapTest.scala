@@ -193,17 +193,17 @@ class ConvertToMapTest extends FlatSpec with ShouldMatchers {
   }
 
   it should "allow null values to be serialized for nullable entity" in {
-    ConvertToMap.convert(YNullable(YString), null)                      should equal (null)
-    ConvertToMap.convert(YNullable(YIntCompatible.YBigInt), null)       should equal (null)
-    ConvertToMap.convert(YNullable(YFloatCompatible.YBigDecimal), null) should equal (null)
-    ConvertToMap.convert(YNullable(YMap(YString)), null)                should equal (null)
-    ConvertToMap.convert(YNullable(YList(ModelFixture.yentity)), null)  should equal (null)
-    ConvertToMap.convert(YNullable(ModelFixture.yentity), null)         should equal (null)
+    ConvertToMap.convert(YNullable(YString), null)                      should be (null)
+    ConvertToMap.convert(YNullable(YIntCompatible.YBigInt), null)       should be (null)
+    ConvertToMap.convert(YNullable(YFloatCompatible.YBigDecimal), null) should be (null)
+    ConvertToMap.convert(YNullable(YMap(YString)), null)                should be (null)
+    ConvertToMap.convert(YNullable(YList(ModelFixture.yentity)), null)  should be (null)
+    ConvertToMap.convert(YNullable(ModelFixture.yentity), null)         should be (null)
   }
 
   it should "throw an exception when serializing YOptional outside of YClassMap" in {
     intercept[CaseYamlException] {
-      ConvertToMap.convert(YOptional(YString).as[String, Any], "123")
+      ConvertToMap.convert(YOptional(YString), Option("123"))
     }.message should equal ("YOptional is not applicable outside of YClassMap")
   }
 
@@ -218,9 +218,9 @@ class ConvertToMapTest extends FlatSpec with ShouldMatchers {
       .convert(ModelFixture.yentity, ModelFixture.model)
       .asInstanceOf[java.util.Map[String, Any]]
 
-    m should have size 5
+    m should have size 6
     m.get("id") should equal ("test")
-    m.get("name") should equal (null)
+    m.get("name") should equal ("name")
     m.get("enabled") should equal (true)
     m.get("count") should equal (10)
     m.get("fraction") should equal (12.2)
@@ -250,5 +250,17 @@ class ConvertToMapTest extends FlatSpec with ShouldMatchers {
 
       p.get("dependencies").asInstanceOf[java.util.List[String]] should be ('empty)
     }
+  }
+
+  it should "throw an exception when an object of incorrect class is serialized using YClassMap" in {
+    intercept[CaseYamlException] {
+      ConvertToMap.convert(ModelFixture.yentity.as[String, Any], "abcd")
+    }.message should equal ("Expected cc.cu.tplex.caseyaml.model.ProjectModel, got java.lang.String")
+  }
+
+  it should "throw an exception when null is serialized using YClassMap" in {
+    intercept[CaseYamlException] {
+      ConvertToMap.convert(ModelFixture.yentity, null)
+    }.message should equal ("Expected cc.cu.tplex.caseyaml.model.ProjectModel, got null")
   }
 }

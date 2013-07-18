@@ -15,10 +15,6 @@ sealed trait YEntry[Cls, Obj, Yml] {
 }
 case class YFieldEntry[Cls, Obj, Yml](name: String, field: Cls => FieldMirror, entity: YEntity[Obj, Yml])
   extends YEntry[Cls, Obj, Yml]
-case class SkipField[Cls, Obj, Yml](name: String = null) extends YEntry[Cls, Obj, Yml] {
-  val field = null
-  val entity = null
-}
 
 case class YClassMap[Cls: TypeTag](entries: YEntry[Cls, _, _]*) extends YEntity[Cls, java.util.Map[String, Any]] {
   val clazz = typeTag[Cls].mirror runtimeClass typeOf[Cls]

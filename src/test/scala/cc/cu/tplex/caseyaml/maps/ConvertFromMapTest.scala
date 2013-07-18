@@ -169,16 +169,44 @@ class ConvertFromMapTest extends FlatSpec with ShouldMatchers with CustomMatcher
   }
 
   it should "deserialize a map from string to other type with conversion" in {
-    val map = new util.HashMap[String, Number]()
-    map.put("a", 11: Int)
-    map.put("b", 12: Long)
-    map.put("c", java.math.BigInteger.valueOf(13))
+    {
+      val map = new util.HashMap[String, Number]()
+      map.put("a", 11: Int)
+      map.put("b", 12: Long)
+      map.put("c", java.math.BigInteger.valueOf(13))
 
-    val cm = ConvertFromMap.convert(YMap(YIntCompatible.YInt), map)
-    cm should have size 3
-    cm("a") should equal (11: Int)
-    cm("b") should equal (12: Int)
-    cm("c") should equal (13: Int)
+      val cmap = ConvertFromMap.convert(YMap(YIntCompatible.YInt), map)
+      cmap should have size 3
+      cmap("a") should equal (11: Int)
+      cmap("b") should equal (12: Int)
+      cmap("c") should equal (13: Int)
+    }
+
+    {
+      val map = new util.HashMap[String, java.lang.Boolean]()
+      map.put("1", true)
+      map.put("2", false)
+      map.put("4", false)
+
+      val cmap = ConvertFromMap.convert(YMap(YBoolean), map)
+      cmap should have size 3
+      cmap("1") should be (true)
+      cmap("2") should be (false)
+      cmap("4") should be (false)
+    }
+
+    {
+      val map = new util.HashMap[String, String]()
+      map.put("a", "b")
+      map.put("c", "d")
+      map.put("z", null)
+
+      val cmap = ConvertFromMap.convert(YMap(YNullable(YString)), map)
+      cmap should have size 3
+      cmap("a") should equal ("b")
+      cmap("c") should equal ("d")
+      cmap("z") should be (null)
+    }
   }
 
   it should "throw an exception when not java.util.Map object is deserialized as a map" in {
@@ -189,5 +217,139 @@ class ConvertFromMapTest extends FlatSpec with ShouldMatchers with CustomMatcher
     intercept[CaseYamlException] {
       ConvertFromMap.convert(YMap(YBoolean).as[Any, Array[Short]], Array(10.toShort))
     }.message should equal ("Expected java.util.Map from string to boolean, got [S")
+  }
+
+  it should "throw an exception when null is deserialized as a map" in {
+    intercept[CaseYamlException] {
+      ConvertFromMap.convert(YMap(YFloatCompatible.YBigDecimal), null)
+    }.message should equal ("Expected java.util.Map from string to double, got null")
+  }
+
+  it should "deserialize a list with conversion" in {
+    {
+      val list = new util.ArrayList[Number]()
+      list.add(1: Int)
+      list.add(2: Long)
+      list.add(java.math.BigInteger.valueOf(3))
+
+      val clist = ConvertFromMap.convert(YList(YIntCompatible.YLong), list)
+      clist should have size 3
+      clist(0) should equal (1: Long)
+      clist(1) should equal (2: Long)
+      clist(2) should equal (3: Long)
+    }
+
+    {
+      val list = new util.ArrayList[String]()
+      list.add("a")
+      list.add(null)
+      list.add("b")
+
+      val clist = ConvertFromMap.convert(YList(YNullable(YString)), list)
+      clist should have size 3
+      clist(0) should equal ("a")
+      clist(1) should be (null)
+      clist(2) should equal ("b")
+    }
+  }
+
+  it should "throw an exception when not java.util.List object is deserialized as a list" in {
+    intercept[CaseYamlException] {
+      ConvertFromMap.convert(YList(YBoolean).as[Any, Array[Boolean]], Array(true, false))
+    }.message should equal ("Expected java.util.List of boolean, got [Z")
+
+    intercept[CaseYamlException] {
+      ConvertFromMap.convert(YList(YIntCompatible.YByte).as[Any, String], "abcd")
+    }.message should equal ("Expected java.util.List of int, long or java.math.BigInteger, got java.lang.String")
+  }
+
+  it should "throw an exception when null is deserialized as a list" in {
+    intercept[CaseYamlException] {
+      ConvertFromMap.convert(YList(YFloatCompatible.YBigDecimal), null)
+    }.message should equal ("Expected java.util.List of double, got null")
+  }
+
+  it should "allow null values to be deserialized for nullable entity" in {
+    ConvertFromMap.convert(YNullable(YString), null)                      should be (null)
+    ConvertFromMap.convert(YNullable(YIntCompatible.YBigInt), null)       should be (null)
+    ConvertFromMap.convert(YNullable(YFloatCompatible.YBigDecimal), null) should be (null)
+    ConvertFromMap.convert(YNullable(YMap(YString)), null)                should be (null)
+    ConvertFromMap.convert(YNullable(YList(ModelFixture.yentity)), null)  should be (null)
+    ConvertFromMap.convert(YNullable(ModelFixture.yentity), null)         should be (null)
+  }
+
+  it should "throw an exception when deserializing YOptional outside of YClassMap" in {
+    intercept[CaseYamlException] {
+      ConvertFromMap.convert(YOptional(YBoolean), java.lang.Boolean.FALSE)
+    }.message should equal ("YOptional is not applicable outside of YClassMap")
+  }
+
+  implicit class Kestrelable[T](obj: T) {
+    def tap(f: T => Any): T = { f(obj); obj }
+  }
+
+  it should "deserialize an object from java.util.Map[String, Any] using YClassMap" in {
+    val map = new util.HashMap[String, Any]()
+      .tap(_.put("id", "projectId"))
+      .tap(_.put("name", "name"))
+      .tap(_.put("enabled", true))
+      .tap(_.put("count", 123: java.lang.Long))
+      .tap(_.put("fraction", 11.1: java.lang.Double))
+      .tap(_.put("plugins", new util.HashMap[String, Any]()
+        .tap(_.put("plugin1", new util.HashMap[String, Any]()
+          .tap(_.put("id", "pluginId1"))
+          .tap(_.put("pluginName", "Plugin 1"))
+          .tap(_.put("data", 0.999: java.lang.Double))
+          .tap(_.put("dependencies", new util.ArrayList[String]().tap(_.add("id1")).tap(_.add("id2"))))
+        ))
+        .tap(_.put("plugin2", new util.HashMap[String, Any]()
+          .tap(_.put("id", "pluginId2"))
+          .tap(_.put("pluginName", "Plugin 2"))
+          .tap(_.put("dependencies", util.Collections.emptyList[String]))
+        ))
+      ))
+
+    val obj = ConvertFromMap.convert(ModelFixture.yentity, map)
+
+    obj.id should equal (ModelId("projectId"))
+    obj.name should equal ("name")
+    obj.enabled should be (true)
+    obj.count should equal (123)
+    obj.fraction should equal (11.1)
+    obj.plugins should have size 2
+
+    {
+      val plugin = obj.plugins("plugin1")
+      plugin.id should equal (ModelId("pluginId1"))
+      plugin.name should equal ("Plugin 1")
+      plugin.data should equal (Some(BigDecimal(0.999)))
+      plugin.dependencies should have size 2
+      plugin.dependencies(0) should equal (ModelId("id1"))
+      plugin.dependencies(1) should equal (ModelId("id2"))
+    }
+
+    {
+      val plugin = obj.plugins("plugin2")
+      plugin.id should equal (ModelId("pluginId2"))
+      plugin.name should equal ("Plugin 2")
+      plugin.data should be (None)
+      plugin.dependencies should be ('empty)
+    }
+  }
+
+  it should "throw an exception when an object of incorrect class is deserialized using YClassMap" in {
+    intercept[CaseYamlException] {
+      ConvertFromMap.convert(ModelFixture.yentity.as[Any, String], "abcd")
+    }.message should equal (
+      "Expected java.util.Map from string to any for cc.cu.tplex.caseyaml.model.ProjectModel, got java.lang.String"
+    )
+  }
+
+  it should "throw an exception when null is deserialized using YClassMap" in {
+    intercept[CaseYamlException] {
+      ConvertFromMap.convert(ModelFixture.yentity, null)
+    }.message should equal (
+      "Expected java.util.Map from string to any for cc.cu.tplex.caseyaml.model.ProjectModel, got null"
+    )
   }
 }

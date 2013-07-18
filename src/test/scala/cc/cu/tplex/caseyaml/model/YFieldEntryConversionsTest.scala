@@ -7,11 +7,11 @@ class YFieldEntryConversionsTest extends FlatSpec with ShouldMatchers {
   import ModelFixture.model
 
   "YFieldEntry implicit conversions" should "allow access to object fields" in {
-    val Seq(id, skip, enabled, count, fraction, plugins) =
+    val Seq(id, name, enabled, count, fraction, plugins) =
       ModelFixture.yentity.entries
 
     id.field(model).get           should equal (ModelId("test"))
-    skip                          should equal (skipField)
+    name.field(model).get         should equal ("name")
     enabled.field(model).get      should equal (true)
     count.field(model).get        should equal (10)
     fraction.field(model).get     should equal (12.2)
