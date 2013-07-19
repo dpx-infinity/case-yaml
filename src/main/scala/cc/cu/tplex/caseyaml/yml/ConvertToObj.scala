@@ -38,6 +38,7 @@ object ConvertToObj {
     case fc: YFloatCompatible[Obj] => convertFloat(fc, checkNull(fc, yml))
     case m: YMap[o, y] => convertMap(m, checkNull(m, yml))
     case l: YList[o, y] => convertList(l, checkNull(l, yml))
+    case s: YSet[o, y] => convertSet(s, checkNull(s, yml))
     case YStringConverted(_, from: Function1[String, Obj]) => from(convertString(yml))
     case cm: YClassMap[Obj] => convertClassMap(cm, checkNull(cm, yml))
     case _: YOptional[_, _] =>
@@ -84,6 +85,14 @@ object ConvertToObj {
 
   def convertList[Obj, Yml, T](entity: YList[Obj, Yml], src: T): Seq[Obj] = src match {
     case list: java.util.List[Yml] => list.asScala.map(v => apply(entity.valueEntity, v)).toVector
+    case _ => throw CaseYamlException(s"Expected ${entity.ymlReprName}, got ${src.getClass.getName}")
+  }
+
+  def convertSet[Obj, Yml, T](entity: YSet[Obj, Yml], src: T): Set[Obj] = src match {
+    case set: java.util.Set[Yml] => entity.valueEntity match {
+      case YNullable(_) => throw CaseYamlException(s"YNullable cannot be used inside YSet")
+      case _ => set.asScala.map(v => apply(entity.valueEntity, v)).toSet
+    }
     case _ => throw CaseYamlException(s"Expected ${entity.ymlReprName}, got ${src.getClass.getName}")
   }
 

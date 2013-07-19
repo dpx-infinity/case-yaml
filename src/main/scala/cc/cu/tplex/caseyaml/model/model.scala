@@ -47,9 +47,15 @@ case class YMap[Obj, Yml](valueEntity: YEntity[Obj, Yml])
   val objReprName = s"map from string to ${valueEntity.objReprName}"
   val ymlReprName = s"java.util.Map from string to ${valueEntity.ymlReprName}"
 }
+
 case class YList[Obj, Yml](valueEntity: YEntity[Obj, Yml]) extends YEntity[Seq[Obj], java.util.List[Yml]] {
   val objReprName = s"list of ${valueEntity.objReprName}"
   val ymlReprName = s"java.util.List of ${valueEntity.ymlReprName}"
+}
+
+case class YSet[Obj, Yml](valueEntity: YEntity[Obj, Yml]) extends YEntity[Set[Obj], java.util.Set[Yml]] {
+  val objReprName = s"set of ${valueEntity.objReprName}"
+  val ymlReprName = s"java.util.Set of ${valueEntity.ymlReprName}"
 }
 
 case class YNullable[Obj <: AnyRef, Yml <: AnyRef](entity: YEntity[Obj, Yml]) extends YEntity[Obj, Yml] {

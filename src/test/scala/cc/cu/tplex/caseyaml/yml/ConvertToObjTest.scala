@@ -285,6 +285,54 @@ class ConvertToObjTest extends FlatSpec with ShouldMatchers with CustomMatchers 
     }.message should equal ("Expected java.util.List of double, got null")
   }
 
+  it should "deserialize a set with conversion" in {
+    {
+      val set = new util.HashSet[Number]()
+      set.add(1: Int)
+      set.add(2: Long)
+      set.add(java.math.BigInteger.valueOf(3))
+
+      val cset = ConvertToObj(YSet(YIntCompatible.YLong), set)
+      cset should have size 3
+      cset should contain (1: Long)
+      cset should contain (2: Long)
+      cset should contain (3: Long)
+    }
+
+    {
+      val set = new util.HashSet[String]()
+      set.add("a")
+      set.add("b")
+
+      val clist = ConvertToObj(YSet(YString), set)
+      clist should have size 2
+      clist should contain ("a")
+      clist should contain ("b")
+    }
+  }
+
+  it should "throw an exception when not java.util.Set object is deserialized as a set" in {
+    intercept[CaseYamlException] {
+      ConvertToObj(YSet(YBoolean).as[Any, Array[Boolean]], Array(true, false))
+    }.message should equal ("Expected java.util.Set of boolean, got [Z")
+
+    intercept[CaseYamlException] {
+      ConvertToObj(YSet(YIntCompatible.YByte).as[Any, String], "abcd")
+    }.message should equal ("Expected java.util.Set of int, long or java.math.BigInteger, got java.lang.String")
+  }
+
+  it should "throw an exception when null is deserialized as a set" in {
+    intercept[CaseYamlException] {
+      ConvertToObj(YSet(YFloatCompatible.YBigDecimal), null)
+    }.message should equal ("Expected java.util.Set of double, got null")
+  }
+
+  it should "throw an exception when YNullable is used inside YSet" in {
+    intercept[CaseYamlException] {
+      ConvertToObj(YSet(YNullable(YIntCompatible.YBigInt)), new util.HashSet[java.lang.Number]())
+    }.message should equal ("YNullable cannot be used inside YSet")
+  }
+
   it should "allow null values to be deserialized for nullable entity" in {
     ConvertToObj(YNullable(YString), null)                      should be (null)
     ConvertToObj(YNullable(YIntCompatible.YBigInt), null)       should be (null)

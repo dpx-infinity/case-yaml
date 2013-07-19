@@ -56,11 +56,11 @@ class Converter[Obj, Yml] private[caseyaml] (entity: YEntity[Obj, Yml], yaml: Ya
     protected def extractMap(obj: Any): Obj
   }
 
-  def deserialize = new BaseDeserializer {
+  def deserialize: Deserializer[Obj] = new BaseDeserializer {
     protected def extractMap(obj: Any) = ConvertToObj(entity, obj.asInstanceOf[Yml])
   }
 
-  def deserialize(subkey: String) = new BaseDeserializer {
+  def deserialize(subkey: String): Deserializer[Obj] = new BaseDeserializer {
     protected def extractMap(obj: Any) = ConvertToObj(entity, obj.asInstanceOf[java.util.Map[String, Any]], subkey)
   }
 }
@@ -70,38 +70,38 @@ object Converter {
     def from(reader: Reader): Obj
     def from(string: String): Obj
 
-    def from(stream: InputStream, charset: Charset = Charset.forName("UTF-8")): Obj =
+    def fromStream(stream: InputStream, charset: Charset = Charset.forName("UTF-8")): Obj =
       from(new InputStreamReader(stream, charset))
 
     def fromFile(file: File, charset: Charset = Charset.forName("UTF-8")): Obj =
-      from(new FileInputStream(file), charset)
+      fromStream(new FileInputStream(file), charset)
 
-    def fromFile(path: String, charset: Charset = Charset.forName("UTF-8")): Obj =
+    def fromFilePath(path: String, charset: Charset = Charset.forName("UTF-8")): Obj =
       fromFile(new File(path), charset)
 
     def fromBytes(array: Array[Byte], charset: Charset = Charset.forName("UTF-8")): Obj =
-      from(new ByteArrayInputStream(array), charset)
+      fromStream(new ByteArrayInputStream(array), charset)
   }
 
   trait Serializer {
     def toStr: String
     def to(writer: Writer)
 
-    def to(stream: OutputStream, charset: Charset = Charset.forName("UTF-8")) {
+    def toStream(stream: OutputStream, charset: Charset = Charset.forName("UTF-8")) {
       to(new OutputStreamWriter(stream ,charset))
     }
 
-    def toFile(path: String, charset: Charset = Charset.forName("UTF-8")) {
-      toFile(new File(path), charset)
+    def toFile(file: File, charset: Charset = Charset.forName("UTF-8")) {
+      toStream(new FileOutputStream(file), charset)
     }
 
-    def toFile(file: File, charset: Charset = Charset.forName("UTF-8")) {
-      to(new FileOutputStream(file), charset)
+    def toFilePath(path: String, charset: Charset = Charset.forName("UTF-8")) {
+      toFile(new File(path), charset)
     }
 
     def toBytes(charset: Charset = Charset.forName("UTF-8")): Array[Byte] = {
       val stream = new ByteArrayOutputStream()
-      to(stream, charset)
+      toStream(stream, charset)
       stream.toByteArray
     }
   }

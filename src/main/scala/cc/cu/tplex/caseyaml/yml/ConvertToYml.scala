@@ -36,6 +36,7 @@ object ConvertToYml {
     case fc: YFloatCompatible[Obj] => convertFloat(fc, checkNull(fc, obj))
     case m: YMap[o, y] => convertMap(m, checkNull(m, obj))
     case l: YList[o, y] => convertList(l, checkNull(l, obj))
+    case s: YSet[o, y] => convertSet(s, checkNull(s, obj))
     case YStringConverted(to: Function1[Obj, String], _) => to(obj)
     case cm: YClassMap[Obj] =>
       if (obj == null || cm.clazz.isInstance(obj)) convertClassMap(cm, checkNull(cm, obj))
@@ -81,6 +82,15 @@ object ConvertToYml {
 
   def convertList[Obj, Yml, T](entity: YList[Obj, Yml], obj: T): java.util.List[Yml] = obj match {
     case s: Seq[Obj] => s.map(v => apply(entity.valueEntity, v)).asJava
+    case _ => throw CaseYamlException(s"Expected ${entity.objReprName}, got ${obj.getClass.getName}")
+  }
+
+  def convertSet[Obj, Yml, T](entity: YSet[Obj, Yml], obj: T): java.util.Set[Yml] = obj match {
+    case s: Set[Obj] => entity.valueEntity match {
+      case YNullable(_) => throw CaseYamlException(s"YNullable cannot be used inside YSet")
+      case _ => s.map(v => apply(entity.valueEntity, v)).asJava
+    }
+
     case _ => throw CaseYamlException(s"Expected ${entity.objReprName}, got ${obj.getClass.getName}")
   }
 

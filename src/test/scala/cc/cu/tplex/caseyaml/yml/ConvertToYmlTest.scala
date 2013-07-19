@@ -202,10 +202,52 @@ class ConvertToYmlTest extends FlatSpec with ShouldMatchers {
     rm.get(2) should equal (1.3)
   }
 
+  it should "throw an exception when serializing non-Seq object as java.util.List" in {
+    intercept[CaseYamlException] {
+      ConvertToYml(YList(YString).as[String, Any], "abcd")
+    }.message should equal ("Expected list of string, got java.lang.String")
+
+    intercept[CaseYamlException] {
+      ConvertToYml(YList(YNullable(YFloatCompatible.YBigDecimal)).as[Array[BigDecimal], Any], Array.empty[BigDecimal])
+    }.message should equal ("Expected list of nullable float-compatible type, got [Lscala.math.BigDecimal;")
+  }
+
   it should "throw an exception when serializing null as java.util.List" in {
     intercept[CaseYamlException] {
       ConvertToYml(YList(YString), null)
     }.message should equal ("Expected list of string, got null")
+  }
+
+  it should "serialize an implementation of Set[?] as java.util.Set[?]" in {
+    val set = Set(1, 2, 3, 3)
+
+    val rm = ConvertToYml(YSet(YIntCompatible.YInt), set).asInstanceOf[java.util.Set[Int]]
+    rm should have size 3
+    rm should contain (1)
+    rm should contain (2)
+    rm should contain (3)
+  }
+
+  it should "throw an exception when serializing non-Set object as java.util.Set" in {
+    intercept[CaseYamlException] {
+      ConvertToYml(YSet(YString).as[String, Any], "abcd")
+    }.message should equal ("Expected set of string, got java.lang.String")
+
+    intercept[CaseYamlException] {
+      ConvertToYml(YSet(YNullable(YFloatCompatible.YBigDecimal)).as[Array[BigDecimal], Any], Array.empty[BigDecimal])
+    }.message should equal ("Expected set of nullable float-compatible type, got [Lscala.math.BigDecimal;")
+  }
+
+  it should "throw an exception when serializing null as java.util.Set" in {
+    intercept[CaseYamlException] {
+      ConvertToYml(YSet(YBoolean), null)
+    }.message should equal ("Expected set of boolean, got null")
+  }
+
+  it should "throw an exception when YNullable is used in YSet" in {
+    intercept[CaseYamlException] {
+      ConvertToYml(YSet(YNullable(YString)), Set("a"))
+    }.message should equal ("YNullable cannot be used inside YSet")
   }
 
   it should "allow null values to be serialized for nullable entity" in {
