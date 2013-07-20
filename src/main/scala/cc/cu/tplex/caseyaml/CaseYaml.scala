@@ -17,6 +17,8 @@
 package cc.cu.tplex.caseyaml
 
 import cc.cu.tplex.caseyaml.model.YEntity
+import cc.cu.tplex.caseyaml.model.generators.ReflectiveEntityTreeGenerator
+import scala.reflect.runtime.universe._
 
 /** Library entry point, contain methods which return intermediate objects which perform [de]serialization. */
 object CaseYaml {
@@ -41,4 +43,7 @@ object CaseYaml {
     * @return a converter for `entity` descriptor
     */
   def apply[Obj, Yml](entity: YEntity[Obj, Yml]) = new Converter(entity)
+
+  def reflectiveEntityGeneratorFor[Obj: TypeTag] =
+    new ReflectiveEntityTreeGenerator[Obj]
 }

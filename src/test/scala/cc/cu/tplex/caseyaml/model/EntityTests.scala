@@ -19,12 +19,11 @@ package cc.cu.tplex.caseyaml.model
 import org.scalatest.FlatSpec
 import org.scalatest.matchers.ShouldMatchers
 
-class YFieldEntryConversionsTest extends FlatSpec with ShouldMatchers {
+class EntityTests extends FlatSpec with ShouldMatchers {
   import ModelFixture.model
 
-  "YFieldEntry implicit conversions" should "allow access to object fields" in {
-    val Seq(id, name, enabled, count, fraction, plugins) =
-      ModelFixture.yentity.entries
+  def testEntity(entity: YClassMap[ProjectModel]) {
+    val Seq(id, name, enabled, count, fraction, plugins) = entity.entries
 
     id.field(model).get           should equal (ModelId("test"))
     name.field(model).get         should equal ("name")
@@ -38,7 +37,7 @@ class YFieldEntryConversionsTest extends FlatSpec with ShouldMatchers {
 
       val Seq(id, name, data, dependencies) =
         plugins.entity.asInstanceOf[YMap[PluginModel, java.util.Map[String, Any]]]
-          .valueEntity.asInstanceOf[YClassMap[PluginModel]].entries
+        .valueEntity.asInstanceOf[YClassMap[PluginModel]].entries
 
       {
         val plugin = pluginsMap("plugin1")
@@ -56,5 +55,13 @@ class YFieldEntryConversionsTest extends FlatSpec with ShouldMatchers {
         dependencies.field(plugin).get should equal (Seq.empty)
       }
     }
+  }
+
+  "Manually constructed entity" should "allow access to object fields" in {
+    testEntity(ModelFixture.manualEntity)
+  }
+
+  "Reflectively generated entity" should "allow access to object fields" in {
+    testEntity(ModelFixture.reflectiveEntity)
   }
 }

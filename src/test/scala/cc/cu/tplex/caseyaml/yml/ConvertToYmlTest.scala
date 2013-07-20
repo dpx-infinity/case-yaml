@@ -255,8 +255,8 @@ class ConvertToYmlTest extends FlatSpec with ShouldMatchers {
     ConvertToYml(YNullable(YIntCompatible.YBigInt), null)       should be (null)
     ConvertToYml(YNullable(YFloatCompatible.YBigDecimal), null) should be (null)
     ConvertToYml(YNullable(YMap(YString)), null)                should be (null)
-    ConvertToYml(YNullable(YList(ModelFixture.yentity)), null)  should be (null)
-    ConvertToYml(YNullable(ModelFixture.yentity), null)         should be (null)
+    ConvertToYml(YNullable(YList(ModelFixture.manualEntity)), null)  should be (null)
+    ConvertToYml(YNullable(ModelFixture.manualEntity), null)         should be (null)
   }
 
   it should "throw an exception when serializing YOptional outside of YClassMap" in {
@@ -271,10 +271,7 @@ class ConvertToYmlTest extends FlatSpec with ShouldMatchers {
     ConvertToYml(ysc, null) should equal ("<null>")
   }
 
-  it should "serialize an object to a java.util.Map/java.util.List tree using YClassMap tree" in {
-    val m = ConvertToYml(ModelFixture.yentity, ModelFixture.model)
-      .asInstanceOf[java.util.Map[String, Any]]
-
+  def checkYmlMap(m: java.util.Map[String, Any], renamedField: Boolean) {
     m should have size 6
     m.get("id") should equal ("test")
     m.get("name") should equal ("name")
@@ -285,11 +282,13 @@ class ConvertToYmlTest extends FlatSpec with ShouldMatchers {
     val plugins = m.get("plugins").asInstanceOf[java.util.Map[String, java.util.Map[String, Any]]]
     plugins should have size 2
 
+    val pluginFieldName = if (renamedField) "pluginName" else "name"
+
     {
       val p = plugins.get("plugin1")
       p should have size 3
       p.get("id") should equal ("id")
-      p.get("pluginName") should equal ("name")
+      p.get(pluginFieldName) should equal ("name")
       p should not contain key ("data")
 
       val d = p.get("dependencies").asInstanceOf[java.util.List[String]]
@@ -302,22 +301,42 @@ class ConvertToYmlTest extends FlatSpec with ShouldMatchers {
       val p = plugins.get("plugin2")
       p should have size 4
       p.get("id") should equal ("id2")
-      p.get("pluginName") should equal ("name2")
+      p.get(pluginFieldName) should equal ("name2")
       p.get("data") should equal (java.math.BigDecimal.valueOf(123.45))
 
       p.get("dependencies").asInstanceOf[java.util.List[String]] should be ('empty)
     }
   }
 
+  it should "serialize an object to a java.util.Map tree using YClassMap tree created manually" in {
+    val m = ConvertToYml(ModelFixture.manualEntity, ModelFixture.model)
+      .asInstanceOf[java.util.Map[String, Any]]
+    checkYmlMap(m, renamedField = true)
+  }
+
+  it should "serialize an object to a java.util.Map tree using YClassMap tree generated reflectively" in {
+    val m = ConvertToYml(ModelFixture.reflectiveEntity, ModelFixture.model)
+            .asInstanceOf[java.util.Map[String, Any]]
+    checkYmlMap(m, renamedField = false)
+  }
+
   it should "throw an exception when an object of incorrect class is serialized using YClassMap" in {
     intercept[CaseYamlException] {
-      ConvertToYml(ModelFixture.yentity.as[String, Any], "abcd")
+      ConvertToYml(ModelFixture.manualEntity.as[String, Any], "abcd")
+    }.message should equal ("Expected cc.cu.tplex.caseyaml.model.ProjectModel, got java.lang.String")
+
+    intercept[CaseYamlException] {
+      ConvertToYml(ModelFixture.reflectiveEntity.as[String, Any], "abcd")
     }.message should equal ("Expected cc.cu.tplex.caseyaml.model.ProjectModel, got java.lang.String")
   }
 
   it should "throw an exception when null is serialized using YClassMap" in {
     intercept[CaseYamlException] {
-      ConvertToYml(ModelFixture.yentity, null)
+      ConvertToYml(ModelFixture.manualEntity, null)
+    }.message should equal ("Expected cc.cu.tplex.caseyaml.model.ProjectModel, got null")
+
+    intercept[CaseYamlException] {
+      ConvertToYml(ModelFixture.reflectiveEntity, null)
     }.message should equal ("Expected cc.cu.tplex.caseyaml.model.ProjectModel, got null")
   }
 }

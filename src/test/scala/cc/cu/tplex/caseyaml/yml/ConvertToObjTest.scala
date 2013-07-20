@@ -338,8 +338,8 @@ class ConvertToObjTest extends FlatSpec with ShouldMatchers with CustomMatchers 
     ConvertToObj(YNullable(YIntCompatible.YBigInt), null)       should be (null)
     ConvertToObj(YNullable(YFloatCompatible.YBigDecimal), null) should be (null)
     ConvertToObj(YNullable(YMap(YString)), null)                should be (null)
-    ConvertToObj(YNullable(YList(ModelFixture.yentity)), null)  should be (null)
-    ConvertToObj(YNullable(ModelFixture.yentity), null)         should be (null)
+    ConvertToObj(YNullable(YList(ModelFixture.manualEntity)), null)  should be (null)
+    ConvertToObj(YNullable(ModelFixture.manualEntity), null)         should be (null)
   }
 
   it should "throw an exception when deserializing YOptional outside of YClassMap" in {
@@ -352,29 +352,49 @@ class ConvertToObjTest extends FlatSpec with ShouldMatchers with CustomMatchers 
     def tap(f: T => Any): T = { f(obj); obj }
   }
 
-  it should "deserialize an object from java.util.Map[String, Any] using YClassMap" in {
-    val map = new util.HashMap[String, Any]()
-      .tap(_.put("id", "projectId"))
-      .tap(_.put("name", "name"))
-      .tap(_.put("enabled", true))
-      .tap(_.put("count", 123: java.lang.Long))
-      .tap(_.put("fraction", 11.1: java.lang.Double))
-      .tap(_.put("plugins", new util.HashMap[String, Any]()
-        .tap(_.put("plugin1", new util.HashMap[String, Any]()
-          .tap(_.put("id", "pluginId1"))
-          .tap(_.put("pluginName", "Plugin 1"))
-          .tap(_.put("data", 0.999: java.lang.Double))
-          .tap(_.put("dependencies", new util.ArrayList[String]().tap(_.add("id1")).tap(_.add("id2"))))
-        ))
-        .tap(_.put("plugin2", new util.HashMap[String, Any]()
-          .tap(_.put("id", "pluginId2"))
-          .tap(_.put("pluginName", "Plugin 2"))
-          .tap(_.put("dependencies", util.Collections.emptyList[String]))
-        ))
+  val ymlObjMap = new util.HashMap[String, Any]()
+    .tap(_.put("id", "projectId"))
+    .tap(_.put("name", "name"))
+    .tap(_.put("enabled", true))
+    .tap(_.put("count", 123: java.lang.Long))
+    .tap(_.put("fraction", 11.1: java.lang.Double))
+    .tap(_.put("plugins", new util.HashMap[String, Any]()
+      .tap(_.put("plugin1", new util.HashMap[String, Any]()
+        .tap(_.put("id", "pluginId1"))
+        .tap(_.put("pluginName", "Plugin 1"))
+        .tap(_.put("data", 0.999: java.lang.Double))
+        .tap(_.put("dependencies", new util.ArrayList[String]().tap(_.add("id1")).tap(_.add("id2"))))
+       ))
+       .tap(_.put("plugin2", new util.HashMap[String, Any]()
+         .tap(_.put("id", "pluginId2"))
+         .tap(_.put("pluginName", "Plugin 2"))
+         .tap(_.put("dependencies", util.Collections.emptyList[String]))
+       ))
+    ))
+
+  // The only difference is "pluginName" -> "name" key change,
+  // because reflective model generator cannot handle renamed keys
+  val ymlObjMap2 = new util.HashMap[String, Any]()
+    .tap(_.put("id", "projectId"))
+    .tap(_.put("name", "name"))
+    .tap(_.put("enabled", true))
+    .tap(_.put("count", 123: java.lang.Long))
+    .tap(_.put("fraction", 11.1: java.lang.Double))
+    .tap(_.put("plugins", new util.HashMap[String, Any]()
+      .tap(_.put("plugin1", new util.HashMap[String, Any]()
+        .tap(_.put("id", "pluginId1"))
+        .tap(_.put("name", "Plugin 1"))
+        .tap(_.put("data", 0.999: java.lang.Double))
+        .tap(_.put("dependencies", new util.ArrayList[String]().tap(_.add("id1")).tap(_.add("id2"))))
       ))
+      .tap(_.put("plugin2", new util.HashMap[String, Any]()
+        .tap(_.put("id", "pluginId2"))
+        .tap(_.put("name", "Plugin 2"))
+        .tap(_.put("dependencies", util.Collections.emptyList[String]))
+       ))
+    ))
 
-    val obj = ConvertToObj(ModelFixture.yentity, map)
-
+  def checkObj(obj: ProjectModel) {
     obj.id should equal (ModelId("projectId"))
     obj.name should equal ("name")
     obj.enabled should be (true)
@@ -401,9 +421,25 @@ class ConvertToObjTest extends FlatSpec with ShouldMatchers with CustomMatchers 
     }
   }
 
+  it should "deserialize an object from java.util.Map[String, Any] using YClassMap constructed manually" in {
+    val obj = ConvertToObj(ModelFixture.manualEntity, ymlObjMap)
+    checkObj(obj)
+  }
+
+  it should "deserialize an object from java.util.Map[String, Any] using YClassMap constructed reflectively" in {
+    val obj = ConvertToObj(ModelFixture.reflectiveEntity, ymlObjMap2)
+    checkObj(obj)
+  }
+
   it should "throw an exception when an object of incorrect class is deserialized using YClassMap" in {
     intercept[CaseYamlException] {
-      ConvertToObj(ModelFixture.yentity.as[Any, String], "abcd")
+      ConvertToObj(ModelFixture.manualEntity.as[Any, String], "abcd")
+    }.message should equal (
+      "Expected java.util.Map from string to any for cc.cu.tplex.caseyaml.model.ProjectModel, got java.lang.String"
+    )
+
+    intercept[CaseYamlException] {
+      ConvertToObj(ModelFixture.reflectiveEntity.as[Any, String], "abcd")
     }.message should equal (
       "Expected java.util.Map from string to any for cc.cu.tplex.caseyaml.model.ProjectModel, got java.lang.String"
     )
@@ -411,7 +447,13 @@ class ConvertToObjTest extends FlatSpec with ShouldMatchers with CustomMatchers 
 
   it should "throw an exception when null is deserialized using YClassMap" in {
     intercept[CaseYamlException] {
-      ConvertToObj(ModelFixture.yentity, null)
+      ConvertToObj(ModelFixture.manualEntity, null)
+    }.message should equal (
+      "Expected java.util.Map from string to any for cc.cu.tplex.caseyaml.model.ProjectModel, got null"
+    )
+
+    intercept[CaseYamlException] {
+      ConvertToObj(ModelFixture.reflectiveEntity, null)
     }.message should equal (
       "Expected java.util.Map from string to any for cc.cu.tplex.caseyaml.model.ProjectModel, got null"
     )

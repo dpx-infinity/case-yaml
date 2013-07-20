@@ -26,16 +26,27 @@ import scala.reflect.ClassTag
  * @author Vladimir Matveev
  */
 package object model {
-  case class NamedField(name: String, fieldName: String)
-
-  implicit class NamedField2EntryWrapper(val namedField: NamedField) extends AnyVal {
-    def -->[T: TypeTag : ClassTag, Obj, Yml](entity: YEntity[Obj, Yml]): YEntry[T, Obj, Yml] = {
-      val fsym = typeOf[T].declaration(namedField.fieldName: TermName).asTerm
+  case class NamedField(name: String, fieldName: String) {
+    def createEntry[T, Obj, Yml](entity: YEntity[Obj, Yml], mirror: Mirror, tpe: Type): YEntry[T, Obj, Yml] = {
+      val fsym = tpe.declaration(fieldName: TermName).asTerm
       def fieldGetter(obj: T) = {
-        val im = typeTag[T].mirror.reflect(obj)
+        val im = mirror.reflect(obj)(ClassTag(obj.getClass))
         im.reflectField(fsym)
       }
-      YFieldEntry(namedField.name, fieldGetter, entity)
+      YFieldEntry(name, fieldGetter, entity)
+    }
+
+    def createEntry[T: TypeTag, Obj, Yml](entity: YEntity[Obj, Yml]): YEntry[T, Obj, Yml] =
+      this.createEntry(entity, typeTag[T].mirror, typeOf[T])
+  }
+
+  object NamedField {
+    def apply(name: String) = NamedField(name, name)
+  }
+
+  implicit class NamedField2EntryWrapper(val namedField: NamedField) extends AnyVal {
+    def -->[T: TypeTag, Obj, Yml](entity: YEntity[Obj, Yml]): YEntry[T, Obj, Yml] = {
+      namedField.createEntry(entity)
     }
   }
 

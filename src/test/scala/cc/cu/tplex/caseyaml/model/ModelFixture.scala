@@ -16,6 +16,8 @@
 
 package cc.cu.tplex.caseyaml.model
 
+import cc.cu.tplex.caseyaml.CaseYaml
+
 /**
  * Date: 14.07.13
  * Time: 14:27
@@ -39,7 +41,7 @@ case class PluginModel(id: ModelId,
 object ModelFixture {
   val modelId = YStringConverted[ModelId](_.id, ModelId)
 
-  val yentity = YClassMap[ProjectModel](
+  val manualEntity = YClassMap[ProjectModel](
     "id"         --> modelId,
     "name"       --> YString,
     "enabled"    --> YBoolean,
@@ -52,6 +54,12 @@ object ModelFixture {
       "dependencies"          --> YList(modelId)
     ))
   )
+
+  val reflectiveEntity =
+    CaseYaml.reflectiveEntityGeneratorFor[ProjectModel]
+      .stringConverted[ModelId](_.id, ModelId)
+      .generateClassMap
+
 
   val model = ProjectModel(
     ModelId("test"),
