@@ -87,7 +87,7 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] { outer =>
 
   private def generateSet(tpe: Type): Option[YEntity[_, _]] =
     if (tpe <:< typeOf[Set[_]])
-      Some(YList(outer.generate(firstTypeParam(tpe.baseType(typeOf[Set[_]].typeSymbol)))))
+      Some(YSet(outer.generate(firstTypeParam(tpe.baseType(typeOf[Set[_]].typeSymbol)))))
     else
       None
 
@@ -138,13 +138,8 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] { outer =>
   private def generateFloatCompatible(tpe: Type): Option[YEntity[_, _]] = floatCompatibles get tpe
 }
 
-object ReflectiveEntityTreeGenerator {
-  private implicit class TypeLookable[T](val seq: Iterable[(Type, T)]) extends AnyVal {
+private object ReflectiveEntityTreeGenerator {
+  implicit class TypeLookable[T](val seq: Iterable[(Type, T)]) extends AnyVal {
     def get(k: Type): Option[T] = seq.find(_._1 =:= k).map(_._2)
-  }
-
-  private implicit class Chainable[F, T](val f: F => Option[T]) extends AnyVal {
-    def +>(other: F => Option[T]): F => Option[T] =
-      (arg) => f(arg) orElse other(arg)
   }
 }
