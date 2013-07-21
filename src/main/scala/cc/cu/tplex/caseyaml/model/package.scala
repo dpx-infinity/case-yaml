@@ -41,7 +41,7 @@ package object model {
   }
 
   object NamedField {
-    def apply(name: String) = NamedField(name, name)
+    def apply(name: String): NamedField = NamedField(name, name)
   }
 
   implicit class NamedField2EntryWrapper(val namedField: NamedField) extends AnyVal {
