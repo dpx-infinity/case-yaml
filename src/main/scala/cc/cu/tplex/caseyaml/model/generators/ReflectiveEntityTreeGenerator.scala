@@ -75,9 +75,10 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] { outer =>
   private final def secondTypeParam(tpe: Type) =
     tpe.asInstanceOf[TypeRefApi].args.tail.head
 
-  private def generateStringConverted(tpe: Type): Option[YEntity[_, _]] = stringConvertedTypes.find(_._1 =:= tpe) map {
-    case (_, toStr, fromStr) => YStringConverted(toStr, fromStr)
-  }
+  private def generateStringConverted(tpe: Type): Option[YEntity[_, _]] =
+    stringConvertedTypes.find(_._1 =:= tpe) map {
+      case (_, toStr, fromStr) => YStringConverted(toStr, fromStr)
+    }
 
   private def generateMap(tpe: Type): Option[YEntity[_, _]] =
     if (tpe <:< typeOf[Map[_, _]])
@@ -103,9 +104,11 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] { outer =>
     else
       None
 
-  private def generateBoolean(tpe: Type): Option[YEntity[_, _]] = if (tpe =:= typeOf[Boolean]) Some(YBoolean) else None
+  private def generateBoolean(tpe: Type): Option[YEntity[_, _]] =
+    if (tpe =:= typeOf[Boolean]) Some(YBoolean) else None
 
-  private def generateString(tpe: Type): Option[YEntity[_, _]] = if (tpe =:= typeOf[String]) Some(YString) else None
+  private def generateString(tpe: Type): Option[YEntity[_, _]] =
+    if (tpe =:= typeOf[String]) Some(YString) else None
 
   // The following is just a black magic I don't really understand, but it seems to work
   private def generateClassMap(tpe: Type): Option[YEntity[_, _]] = if (tpe.typeSymbol.asClass.isCaseClass) Some {
