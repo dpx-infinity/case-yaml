@@ -30,21 +30,44 @@ import scala.Some
  * @author Vladimir Matveev
  */
 class MacroEntityTreeGenerator {
-  type ConvPair = (T => String, String => T) forSome { type T }
+  import MacroEntityTreeGenerator._
 
-  def generateWithStringConverted[Obj, Yml](convs: ConvPair*): YEntity[Obj, Yml] =
+  def generate[Obj, Yml](convs: ConvPair*): YEntity[Obj, Yml] =
     macro MacroEntityTreeGenerator.generateImpl[Obj, Yml]
 
-  def generateClassWithStringConverted[Obj]: YClassMap[Obj] =
+  def generateClass[Obj](convs: ConvPair*): YClassMap[Obj] =
     macro MacroEntityTreeGenerator.generateClassImpl[Obj]
 }
 
 object MacroEntityTreeGenerator {
-  def generateImpl[Obj: c.TypeTag, Yml](c: Context)(): c.Expr[YEntity[Obj, Yml]] = {
+  type ConvPair = (T => String, String => T) forSome { type T }
+
+  def generateClassImpl[Obj: c.TypeTag](c: Context)(convs: c.Expr[ConvPair]*): c.Expr[YClassMap[Obj]] = {
+    generateImpl(c)(convs: _*).asInstanceOf[c.Expr[YClassMap[Obj]]]
+  }
+
+  def generateImpl[Obj: c.TypeTag, Yml](c: Context)(convs: c.Expr[ConvPair]*): c.Expr[YEntity[Obj, Yml]] = {
     import c.universe._
 
     implicit class TypeLookable[T](val seq: Iterable[(Type, T)]) extends AnyVal {
       def get(k: Type): Option[T] = seq.find(_._1 =:= k).map(_._2)
+    }
+
+    val convPairs: Seq[(c.Expr[T => String], c.Expr[String => T]) forSome { type T }] = {
+      val any2ArrowAssocName = c.universe.newTermName("any2ArrowAssoc")
+      val minusGreaterName = c.universe.newTermName("$minus$greater")
+      val applyName = c.universe.newTermName("apply")
+      convs map {
+        case Apply(Select(Apply(Select(Ident(scala.Predef), `any2ArrowAssocName`), List(arg1)), `minusGreaterName`), List(arg2)) =>
+          (arg1, arg2).asInstanceOf[(c.Expr[T => String], c.Expr[String => T]) forSome { type T }]
+        case Apply(Select(Ident(scala.Tuple2), `applyName`), List(arg1, arg2)) =>
+          (arg1, arg2).asInstanceOf[(c.Expr[T => String], c.Expr[String => T]) forSome { type T }]
+        case _ =>
+          c.abort(
+            c.enclosingPosition,
+            "Invalid argument specified, expected either 'toStr -> fromStr' or (toStr, fromStr)"
+          )
+      }
     }
 
     def firstTypeParam(tpe: Type) =
