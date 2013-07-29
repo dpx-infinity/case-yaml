@@ -69,20 +69,22 @@ class Converter[Obj, Yml] private[caseyaml] (entity: YEntity[Obj, Yml],
 }
 
 object Converter {
+  private final val UTF_8 = Charset.forName("UTF-8")
+
   trait Deserializer[Obj] {
     def from(reader: Reader): Obj
     def from(string: String): Obj
 
-    def fromStream(stream: InputStream, charset: Charset = Charset.forName("UTF-8")): Obj =
+    def fromStream(stream: InputStream, charset: Charset = UTF_8): Obj =
       from(new InputStreamReader(stream, charset))
 
-    def fromFile(file: File, charset: Charset = Charset.forName("UTF-8")): Obj =
+    def fromFile(file: File, charset: Charset = UTF_8): Obj =
       fromStream(new FileInputStream(file), charset)
 
-    def fromFilePath(path: String, charset: Charset = Charset.forName("UTF-8")): Obj =
+    def fromFilePath(path: String, charset: Charset = UTF_8): Obj =
       fromFile(new File(path), charset)
 
-    def fromBytes(array: Array[Byte], charset: Charset = Charset.forName("UTF-8")): Obj =
+    def fromBytes(array: Array[Byte], charset: Charset = UTF_8): Obj =
       fromStream(new ByteArrayInputStream(array), charset)
   }
 
@@ -91,19 +93,19 @@ object Converter {
     def to(writer: Writer)
     def toYml: Yml
 
-    def toStream(stream: OutputStream, charset: Charset = Charset.forName("UTF-8")) {
+    def toStream(stream: OutputStream, charset: Charset = UTF_8) {
       to(new OutputStreamWriter(stream ,charset))
     }
 
-    def toFile(file: File, charset: Charset = Charset.forName("UTF-8")) {
+    def toFile(file: File, charset: Charset = UTF_8) {
       toStream(new FileOutputStream(file), charset)
     }
 
-    def toFilePath(path: String, charset: Charset = Charset.forName("UTF-8")) {
+    def toFilePath(path: String, charset: Charset = UTF_8) {
       toFile(new File(path), charset)
     }
 
-    def toBytes(charset: Charset = Charset.forName("UTF-8")): Array[Byte] = {
+    def toBytes(charset: Charset = UTF_8): Array[Byte] = {
       val stream = new ByteArrayOutputStream()
       toStream(stream, charset)
       stream.toByteArray
