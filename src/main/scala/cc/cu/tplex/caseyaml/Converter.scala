@@ -31,7 +31,8 @@ import org.yaml.snakeyaml.error.YAMLException
  *
  * @author Vladimir Matveev
  */
-class Converter[Obj, Yml] private[caseyaml] (entity: YEntity[Obj, Yml], yaml: Yaml = new Yaml(new SafeConstructor)) {
+class Converter[Obj, Yml] private[caseyaml] (entity: YEntity[Obj, Yml],
+                                             yaml: Yaml = new Yaml(new SafeConstructor)) {
   def withYaml(yaml: Yaml) = new Converter(entity, yaml)
 
   def wrap[T](e: => T) = try {
@@ -40,12 +41,14 @@ class Converter[Obj, Yml] private[caseyaml] (entity: YEntity[Obj, Yml], yaml: Ya
     case e: YAMLException => throw CaseYamlException("YAML [de]serialization error", e)
   }
 
-  def serialize(obj: Obj) = new Serializer {
+  def serialize(obj: Obj): Serializer[Yml] = new Serializer[Yml] {
     def toStr = wrap(yaml.dump(obj))
 
     def to(writer: Writer) {
       wrap(yaml.dump(ConvertToYml(entity, obj), writer))
     }
+
+    def toYml: Yml = ConvertToYml(entity, obj)
   }
 
   private abstract class BaseDeserializer extends Deserializer[Obj] {
@@ -61,7 +64,7 @@ class Converter[Obj, Yml] private[caseyaml] (entity: YEntity[Obj, Yml], yaml: Ya
   }
 
   def deserialize(subkey: String): Deserializer[Obj] = new BaseDeserializer {
-    protected def extractMap(obj: Any) = ConvertToObj(entity, obj.asInstanceOf[java.util.Map[String, Any]], subkey)
+    protected def extractMap(obj: Any) = ConvertToObj(entity, obj, subkey)
   }
 }
 
@@ -83,9 +86,10 @@ object Converter {
       fromStream(new ByteArrayInputStream(array), charset)
   }
 
-  trait Serializer {
+  trait Serializer[Yml] {
     def toStr: String
     def to(writer: Writer)
+    def toYml: Yml
 
     def toStream(stream: OutputStream, charset: Charset = Charset.forName("UTF-8")) {
       to(new OutputStreamWriter(stream ,charset))

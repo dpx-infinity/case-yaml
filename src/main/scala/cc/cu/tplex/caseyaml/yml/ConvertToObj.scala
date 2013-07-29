@@ -27,8 +27,12 @@ import scala.collection.JavaConverters
 object ConvertToObj {
   import JavaConverters._
 
-  def apply[Obj, Yml](entity: YEntity[Obj, Yml], obj: java.util.Map[String, Any], key: String): Obj =
-    apply(entity, obj.get(key).asInstanceOf[Yml])
+  def apply[Obj, Yml](entity: YEntity[Obj, Yml], obj: Any, key: String): Obj =
+    obj match {
+      case m: java.util.Map[String, Any] => apply(entity, m.get(key).asInstanceOf[Yml])
+      case _ => throw CaseYamlException(s"Expected java.util.Map[String, Any], got ${obj.getClass.getName}")
+    }
+
 
   def apply[Obj, Yml](entity: YEntity[Obj, Yml], yml: Yml): Obj = entity match {
     case yn: YNullable[Obj, Yml] => convertNullable[Obj, Yml](yn.entity, yml)
