@@ -47,6 +47,8 @@ object ConvertToObj {
     case cm: YClassMap[Obj] => convertClassMap(cm, checkNull(cm, yml))
     case _: YOptional[_, _] =>
       throw CaseYamlException("YOptional is not applicable outside of YClassMap")
+    case _: YDefault[_, _] =>
+      throw CaseYamlException("YDefault is not applicable outside of YClassMap")
   }
 
   def checkNull[Obj, Yml](entity: YEntity[Obj, Yml], obj: Yml): Yml = obj match {
@@ -107,6 +109,8 @@ object ConvertToObj {
           entity match {
             case o: YOptional[io, `y`] =>
               map.asScala.get(name).map { case value: y => apply(o.entity, value) }
+            case d: YDefault[`o`, `y`] =>
+              map.asScala.get(name).map { case value: y => apply(d.entity, value) }.getOrElse(d.default)
             case _ =>
               if (map.containsKey(name))
                 apply(entity, map.get(name).asInstanceOf[y])

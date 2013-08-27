@@ -348,6 +348,12 @@ class ConvertToObjTest extends FlatSpec with ShouldMatchers with CustomMatchers 
     }.message should equal ("YOptional is not applicable outside of YClassMap")
   }
 
+  it should "throw an exception when deserializing YDefault outside of YClassMap" in {
+    intercept[CaseYamlException] {
+      ConvertToObj(YDefault(YBoolean, true), java.lang.Boolean.FALSE)
+    }.message should equal ("YDefault is not applicable outside of YClassMap")
+  }
+
   implicit class Kestrelable[T](obj: T) {
     def tap(f: T => Any): T = { f(obj); obj }
   }
@@ -363,6 +369,7 @@ class ConvertToObjTest extends FlatSpec with ShouldMatchers with CustomMatchers 
         .tap(_.put("id", "pluginId1"))
         .tap(_.put("pluginName", "Plugin 1"))
         .tap(_.put("data", 0.999: java.lang.Double))
+        .tap(_.put("status", "inactive"))
         .tap(_.put("dependencies", new util.ArrayList[String]().tap(_.add("id1")).tap(_.add("id2"))))
        ))
        .tap(_.put("plugin2", new util.HashMap[String, Any]()
@@ -385,6 +392,7 @@ class ConvertToObjTest extends FlatSpec with ShouldMatchers with CustomMatchers 
         .tap(_.put("id", "pluginId1"))
         .tap(_.put("name", "Plugin 1"))
         .tap(_.put("data", 0.999: java.lang.Double))
+        .tap(_.put("status", "inactive"))
         .tap(_.put("dependencies", new util.ArrayList[String]().tap(_.add("id1")).tap(_.add("id2"))))
       ))
       .tap(_.put("plugin2", new util.HashMap[String, Any]()
@@ -407,6 +415,7 @@ class ConvertToObjTest extends FlatSpec with ShouldMatchers with CustomMatchers 
       plugin.id should equal (ModelId("pluginId1"))
       plugin.name should equal ("Plugin 1")
       plugin.data should equal (Some(BigDecimal(0.999)))
+      plugin.status should equal ("inactive")
       plugin.dependencies should have size 2
       plugin.dependencies(0) should equal (ModelId("id1"))
       plugin.dependencies(1) should equal (ModelId("id2"))
@@ -417,6 +426,7 @@ class ConvertToObjTest extends FlatSpec with ShouldMatchers with CustomMatchers 
       plugin.id should equal (ModelId("pluginId2"))
       plugin.name should equal ("Plugin 2")
       plugin.data should be (None)
+      plugin.status should equal ("active")
       plugin.dependencies should be ('empty)
     }
   }

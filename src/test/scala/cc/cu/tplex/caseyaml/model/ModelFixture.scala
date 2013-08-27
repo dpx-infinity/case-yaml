@@ -36,6 +36,7 @@ case class ProjectModel(id: ModelId,
 case class PluginModel(id: ModelId,
                        name: String,
                        data: Option[BigDecimal],
+                       status: String = "active",
                        dependencies: Seq[ModelId])
 
 object ModelFixture {
@@ -51,6 +52,7 @@ object ModelFixture {
       "id"                    --> modelId,
       "name" ~> "pluginName"  --> YString,
       "data"                  --> YOptional(YFloatCompatible.YBigDecimal),
+      "status"                --> YDefault(YString, "active"),
       "dependencies"          --> YList(modelId)
     ))
   )
@@ -72,12 +74,14 @@ object ModelFixture {
         ModelId("id"),
         "name",
         None,
+        "inactive",
         Seq(ModelId("id1"), ModelId("id2"))
       ),
       "plugin2" -> PluginModel(
         ModelId("id2"),
         "name2",
         Some(123.45),
+        "active",
         Seq.empty
       )
     )

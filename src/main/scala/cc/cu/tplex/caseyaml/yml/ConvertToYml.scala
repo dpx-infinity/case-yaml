@@ -43,6 +43,8 @@ object ConvertToYml {
       else throw CaseYamlException(s"Expected ${cm.clazz.getName}, got ${obj.getClass.getName}")
     case _: YOptional[_, _] =>
       throw CaseYamlException("YOptional is not applicable outside of YClassMap")
+    case _: YDefault[_, _] =>
+      throw CaseYamlException("YDefault is not applicable outside of YClassMap")
   }
 
   def checkNull[Obj, Yml](entity: YEntity[Obj, Yml], obj: Obj): Obj = obj match {
@@ -98,6 +100,9 @@ object ConvertToYml {
     cm.entries.map {
       case entry: YEntry[T, o, y] =>
         val (entity, possibleValue) = entry.entity match {
+          case yd: YDefault[`o`, `y`] =>
+            // Just pass through the defaultable
+            yd.entity -> Some(entry.field(obj).get.asInstanceOf[o])
           case yo: YOptional[`o`, `y`] => yo.entity -> (entry.field(obj).get match {
             case Some(value: `o`) => Some(value)
             case None => None

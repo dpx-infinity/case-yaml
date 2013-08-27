@@ -58,7 +58,8 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] { outer =>
   }
 
   private final val generator: Type => Option[YEntity[_, _]] =
-    generateIntCompatible _ +>
+    generateDefaultable _ +>
+    generateIntCompatible +>
     generateFloatCompatible +>
     generateString +>
     generateBoolean +>
@@ -139,6 +140,9 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] { outer =>
     typeOf[BigDecimal] -> YFloatCompatible.YBigDecimal
   )
   private def generateFloatCompatible(tpe: Type): Option[YEntity[_, _]] = floatCompatibles get tpe
+
+  // TODO: fix this (or move to generateClassMap?)
+  private def generateDefaultable(tpe: Type): Option[YEntity[_, _]] = None
 }
 
 private object ReflectiveEntityTreeGenerator {

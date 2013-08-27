@@ -68,6 +68,11 @@ case class YOptional[Obj, Yml](entity: YEntity[Obj, Yml]) extends YEntity[Option
   val ymlReprName = s"optional ${entity.ymlReprName}"
 }
 
+case class YDefault[Obj, Yml](entity: YEntity[Obj, Yml], default: Obj) extends YEntity[Obj, Yml] {
+  val objReprName = s"${entity.objReprName} with default value"
+  val ymlReprName = s"${entity.ymlReprName} with default value"
+}
+
 case class YStringConverted[Obj: ClassTag](toStr: Obj => String, fromStr: String => Obj) extends YEntity[Obj, String] {
   val objReprName = s"string for ${implicitly[ClassTag[Obj]].runtimeClass.getName}"
   val ymlReprName = objReprName

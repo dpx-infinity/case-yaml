@@ -265,6 +265,12 @@ class ConvertToYmlTest extends FlatSpec with ShouldMatchers {
     }.message should equal ("YOptional is not applicable outside of YClassMap")
   }
 
+  it should "throw an exception when serializing YDefault outside of YClassMap" in {
+    intercept[CaseYamlException] {
+      ConvertToYml(YDefault(YString, "abc"), "123")
+    }.message should equal ("YDefault is not applicable outside of YClassMap")
+  }
+
   it should "allow null values for YStringConverted" in {
     val ysc = YStringConverted[String](s => if (s == null) "<null>" else s, s => s)
     ConvertToYml(ysc, "abc") should equal ("abc")
@@ -286,10 +292,11 @@ class ConvertToYmlTest extends FlatSpec with ShouldMatchers {
 
     {
       val p = plugins.get("plugin1")
-      p should have size 3
+      p should have size 4
       p.get("id") should equal ("id")
       p.get(pluginFieldName) should equal ("name")
       p should not contain key ("data")
+      p.get("status") should equal ("inactive")
 
       val d = p.get("dependencies").asInstanceOf[java.util.List[String]]
       d should have size 2
@@ -299,10 +306,11 @@ class ConvertToYmlTest extends FlatSpec with ShouldMatchers {
 
     {
       val p = plugins.get("plugin2")
-      p should have size 4
+      p should have size 5
       p.get("id") should equal ("id2")
       p.get(pluginFieldName) should equal ("name2")
       p.get("data") should equal (java.math.BigDecimal.valueOf(123.45))
+      p.get("status") should equal ("active")
 
       p.get("dependencies").asInstanceOf[java.util.List[String]] should be ('empty)
     }
