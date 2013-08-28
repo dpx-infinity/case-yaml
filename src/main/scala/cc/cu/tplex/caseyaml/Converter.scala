@@ -16,7 +16,7 @@
 
 package cc.cu.tplex.caseyaml
 
-import cc.cu.tplex.caseyaml.model.YEntity
+import cc.cu.tplex.caseyaml.model.{YClassMap, YEntity}
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
 import java.io._
@@ -24,6 +24,7 @@ import cc.cu.tplex.caseyaml.yml.{ConvertToObj, ConvertToYml}
 import java.nio.charset.Charset
 import cc.cu.tplex.caseyaml.Converter.{Deserializer, Serializer}
 import org.yaml.snakeyaml.error.YAMLException
+import scala.reflect.ClassTag
 
 /**
  * Date: 13.07.13
@@ -31,41 +32,12 @@ import org.yaml.snakeyaml.error.YAMLException
  *
  * @author Vladimir Matveev
  */
-class Converter[Obj, Yml] private[caseyaml] (entity: YEntity[Obj, Yml],
-                                             yaml: Yaml = new Yaml(new SafeConstructor)) {
-  def withYaml(yaml: Yaml) = new Converter(entity, yaml)
+trait Converter[Obj, Yml] {
+  def withYaml(yaml: Yaml): Converter[Obj, Yml]
 
-  def wrap[T](e: => T) = try {
-    e
-  } catch {
-    case e: YAMLException => throw CaseYamlException("YAML [de]serialization error", e)
-  }
-
-  def serialize(obj: Obj): Serializer[Yml] = new Serializer[Yml] {
-    def toStr = wrap(yaml.dump(obj))
-
-    def to(writer: Writer) {
-      wrap(yaml.dump(ConvertToYml(entity, obj), writer))
-    }
-
-    def toYml: Yml = ConvertToYml(entity, obj)
-  }
-
-  private abstract class BaseDeserializer extends Deserializer[Obj] {
-    def from(reader: Reader) = extractMap(wrap(yaml.load(reader)))
-
-    def from(string: String) = extractMap(wrap(yaml.load(string)))
-
-    protected def extractMap(obj: Any): Obj
-  }
-
-  def deserialize: Deserializer[Obj] = new BaseDeserializer {
-    protected def extractMap(obj: Any) = ConvertToObj(entity, obj.asInstanceOf[Yml])
-  }
-
-  def deserialize(subkey: String): Deserializer[Obj] = new BaseDeserializer {
-    protected def extractMap(obj: Any) = ConvertToObj(entity, obj, subkey)
-  }
+  def serialize(obj: Obj): Serializer[Yml]
+  def deserialize: Deserializer[Obj]
+  def deserialize(subkey: String): Deserializer[Obj]
 }
 
 object Converter {
@@ -111,4 +83,90 @@ object Converter {
       stream.toByteArray
     }
   }
+}
+
+private[caseyaml] class DefaultConverter[Obj, Yml] (entity: YEntity[Obj, Yml],
+                                                    yaml: Yaml = new Yaml(new SafeConstructor))
+  extends Converter[Obj, Yml] {
+
+  def withYaml(yaml: Yaml) = new DefaultConverter(entity, yaml)
+
+  private def wrap[T](e: => T) = try {
+    e
+  } catch {
+    case e: YAMLException => throw CaseYamlException("YAML [de]serialization error", e)
+  }
+
+  def serialize(obj: Obj): Serializer[Yml] = new Serializer[Yml] {
+    def toStr = wrap(yaml.dump(obj))
+
+    def to(writer: Writer) {
+      wrap(yaml.dump(ConvertToYml(entity, obj), writer))
+    }
+
+    def toYml: Yml = ConvertToYml(entity, obj)
+  }
+
+  private abstract class BaseDeserializer extends Deserializer[Obj] {
+    def from(reader: Reader) = extractMap(wrap(yaml.load(reader)))
+
+    def from(string: String) = extractMap(wrap(yaml.load(string)))
+
+    protected def extractMap(obj: Any): Obj
+  }
+
+  def deserialize: Deserializer[Obj] = new BaseDeserializer {
+    protected def extractMap(obj: Any) = ConvertToObj(entity, obj.asInstanceOf[Yml])
+  }
+
+  def deserialize(subkey: String): Deserializer[Obj] = new BaseDeserializer {
+    protected def extractMap(obj: Any) = ConvertToObj(entity, obj, subkey)
+  }
+}
+
+trait AccumulatingClassConverter {
+  def classMaps: Map[ClassTag[_], YClassMap[_]]
+
+  def withYaml(yaml: Yaml): AccumulatingClassConverter
+
+  def <>[Obj: ClassTag](entity: YClassMap[Obj]): AccumulatingClassConverter
+  def <+>(classMaps: Map[ClassTag[_], YClassMap[_]]): AccumulatingClassConverter
+
+  def serialize(obj: Any): Serializer[Any]
+  def deserialize[T: ClassTag]: Deserializer[T]
+  def deserialize[T: ClassTag](subkey: String): Deserializer[T]
+}
+
+private[caseyaml] class MultiConverter(yaml: Yaml = new Yaml(new SafeConstructor),
+                                       val classMaps: Map[ClassTag[_], YClassMap[_]] = Map.empty)
+  extends AccumulatingClassConverter {
+  private def classTag[T: ClassTag] = implicitly[ClassTag[T]]
+
+  private def converterFor[Obj](entity: YEntity[_, _]) =
+    new DefaultConverter(entity, yaml).asInstanceOf[Converter[Obj, Any]]
+
+  def withYaml(yaml: Yaml) = new MultiConverter(yaml, classMaps)
+
+  def serialize(obj: Any) = {
+    classMaps.get(ClassTag(obj.getClass)) match {
+      case Some(entity) => converterFor(entity).serialize(obj)
+      case None => throw CaseYamlException(s"No entity is configured for class ${obj.getClass}")
+    }
+  }
+
+  def deserialize[T: ClassTag] = classMaps.get(classTag[T]) match {
+    case Some(entity) => converterFor[T](entity).deserialize
+    case None => throw CaseYamlException(s"No entity is configured for class ${classTag[T].runtimeClass}")
+  }
+
+  def deserialize[T: ClassTag](subkey: String) = classMaps.get(classTag[T]) match {
+    case Some(entity) => converterFor[T](entity).deserialize(subkey)
+    case None => throw CaseYamlException(s"No entity is configured for class ${classTag[T].runtimeClass}")
+  }
+
+  def <>[Obj: ClassTag](entity: YClassMap[Obj]) =
+    new MultiConverter(yaml, this.classMaps + (classTag[Obj] -> entity))
+
+  def <+>(classMaps: Map[ClassTag[_], YClassMap[_]]) =
+    new MultiConverter(yaml, this.classMaps ++ classMaps)
 }

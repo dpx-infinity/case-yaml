@@ -31,7 +31,7 @@ object CaseYaml {
     * @tparam Yml type of the YAML representation (usually [[java.util.Map]][String, Any] for classes
     * @return a converter for `entity` descriptor
     */
-  def forEntity[Obj, Yml](entity: YEntity[Obj, Yml]) = new Converter(entity)
+  def forEntity[Obj, Yml](entity: YEntity[Obj, Yml]): Converter[Obj, Yml] = new DefaultConverter(entity)
 
   /** Same as [[cc.cu.tplex.caseyaml.CaseYaml#forEntity]],
     * returns an intermediate object, [[cc.cu.tplex.caseyaml.Converter]], which provides very small DSL for
@@ -42,7 +42,9 @@ object CaseYaml {
     * @tparam Yml type of the YAML representation (usually [[java.util.Map]][String, Any] for classes
     * @return a converter for `entity` descriptor
     */
-  def apply[Obj, Yml](entity: YEntity[Obj, Yml]) = new Converter(entity)
+  def apply[Obj, Yml](entity: YEntity[Obj, Yml]): Converter[Obj, Yml] = new DefaultConverter(entity)
+
+  def forMultipleClasses: AccumulatingClassConverter = new MultiConverter
 
   def reflectiveEntityGeneratorFor[Obj: TypeTag] =
     new ReflectiveEntityTreeGenerator[Obj]
