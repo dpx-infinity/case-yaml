@@ -45,6 +45,7 @@ object ConvertToObj {
     case s: YSet[o, y] => convertSet(s, checkNull(s, yml))
     case YStringConverted(_, from: Function1[String, Obj]) => from(convertString(yml))
     case cm: YClassMap[Obj] => convertClassMap(cm, checkNull(cm, yml))
+    case st: YSealedTrait[Obj] => convertSealedTrait(st, checkNull(st, yml))
     case _: YOptional[_, _] =>
       throw CaseYamlException("YOptional is not applicable outside of YClassMap")
     case _: YDefault[_, _] =>
@@ -121,5 +122,16 @@ object ConvertToObj {
       cm.ctormirror(ctorArgs: _*).asInstanceOf[Obj]
 
     case _ => throw CaseYamlException(s"Expected ${cm.ymlReprName}, got " + src.getClass.getName)
+  }
+
+  def convertSealedTrait[Obj, T](st: YSealedTrait[Obj], src: T): Obj = src match {
+    case map: java.util.Map[String, Any] =>
+      val tpe = Option(map.get("$type$").asInstanceOf[String])
+        .getOrElse(throw CaseYamlException(s"No type identifier is present when reading ${st.ymlReprName}"))
+      val entity = st.subclasses.find(_.clazz.getSimpleName == tpe)
+        .getOrElse(throw CaseYamlException(s"Type $tpe is not registred for ${st.objReprName}"))
+      apply(entity, map)
+
+    case _ => throw CaseYamlException(s"Expected ${st.ymlReprName}, got " + src.getClass.getName)
   }
 }

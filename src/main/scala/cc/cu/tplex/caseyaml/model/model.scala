@@ -16,8 +16,10 @@
 
 package cc.cu.tplex.caseyaml.model
 
-import scala.reflect.runtime.universe._
+import scala.reflect.runtime.{universe => ru}
+import ru._
 import scala.reflect.ClassTag
+import cc.cu.tplex.caseyaml.model.generators.ReflectiveEntityTreeGenerator
 
 sealed trait YEntity[Obj, Yml] {
   def objReprName: String
@@ -40,6 +42,52 @@ case class YClassMap[Cls: TypeTag](entries: YEntry[Cls, _, _]*) extends YEntity[
   }
   val objReprName = clazz.getName
   val ymlReprName = "java.util.Map from string to any for " + clazz.getName
+}
+
+case class YSealedTrait[Cls: TypeTag](subclasses: YClassMap[_ <: Cls]*)
+  extends YEntity[Cls, java.util.Map[String, Any]] {
+  val clazz = typeTag[Cls].mirror runtimeClass typeOf[Cls]
+  def objReprName = s"sealed trait ${clazz.getName}"
+  def ymlReprName = s"java.util.Map from string to any for sealed trait " + clazz.getName
+}
+
+object YSealedTrait {
+  import scala.reflect.macros.Context
+
+  type TreeGenProvider = (TypeTag[X] => ReflectiveEntityTreeGenerator[X]) forSome { type X }
+
+  def construct[T](gen: TreeGenProvider): YSealedTrait[T] =
+    macro construct_impl
+
+  def construct_impl[T: c.WeakTypeTag](c: Context)(gen: c.Expr[TreeGenProvider]) = {
+    import c.universe._
+
+    val symbol = weakTypeOf[T].typeSymbol
+
+    if (!symbol.isClass) {
+      c.abort(c.enclosingPosition, "Can only construct YSealedTrait from _sealed trait_")
+    } else if (!symbol.asClass.isTrait) {
+      c.abort(c.enclosingPosition, "Can only construct YSealedTrait from sealed _trait_")
+    } else if (!symbol.asClass.isSealed) {
+      c.abort(c.enclosingPosition, "Can only construct YSealedTrait from _sealed_ trait")
+    } else {
+      val children = symbol.asClass.knownDirectSubclasses.toSeq
+
+      if (!children.forall(c => c.isClass && c.asClass.isCaseClass)) {
+        c.abort(c.enclosingPosition, "All children of sealed trait must be case classes")
+      }
+
+      def reflectiveCall[X](generator: c.Expr[TreeGenProvider],
+                            tpe: c.Expr[ru.TypeTag[X]]): c.Expr[ReflectiveEntityTreeGenerator[X]] =
+        reify { generator.splice.apply(tpe.splice) }
+
+      reify {
+        val g = gen.splice
+
+      }
+
+    }
+  }
 }
 
 case class YMap[Obj, Yml](valueEntity: YEntity[Obj, Yml])

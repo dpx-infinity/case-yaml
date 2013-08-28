@@ -38,6 +38,9 @@ object ConvertToYml {
     case l: YList[o, y] => convertList(l, checkNull(l, obj))
     case s: YSet[o, y] => convertSet(s, checkNull(s, obj))
     case YStringConverted(to: Function1[Obj, String], _) => to(obj)
+    case st: YSealedTrait[Obj] =>
+      if (obj == null || st.clazz.isInstance(obj)) convertSealedTrait(st, checkNull(st, obj))
+      else throw CaseYamlException(s"Expected ${st.clazz.getName}, got ${obj.getClass.getName}")
     case cm: YClassMap[Obj] =>
       if (obj == null || cm.clazz.isInstance(obj)) convertClassMap(cm, checkNull(cm, obj))
       else throw CaseYamlException(s"Expected ${cm.clazz.getName}, got ${obj.getClass.getName}")
@@ -113,5 +116,18 @@ object ConvertToYml {
         }
         possibleValue map { value => entry.name -> apply[o, y](entity, value) }
     }.flatten.toMap.asJava
+
+  def convertSealedTrait[T](st: YSealedTrait[T], obj: T): java.util.Map[String, Any] = {
+    st.subclasses.find(_.clazz.isInstance(obj)) match {
+      case Some(entity) =>
+        val result = apply(entity, obj)
+        result.put("$type$", entity.clazz.getSimpleName)
+        result
+      case None =>
+        throw CaseYamlException(
+          s"Class ${obj.getClass} is not registred as a subclass of sealed trait ${st.clazz.getName}"
+        )
+    }
+  }
 }
 
