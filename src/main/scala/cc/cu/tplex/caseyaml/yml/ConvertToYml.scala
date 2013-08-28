@@ -20,6 +20,7 @@ import cc.cu.tplex.caseyaml.model._
 import scala.Some
 import cc.cu.tplex.caseyaml.CaseYamlException
 import scala.collection.JavaConverters
+import java.util
 
 /**
  * Date: 15.07.13
@@ -119,13 +120,14 @@ object ConvertToYml {
 
   def convertSealedTrait[T](st: YSealedTrait[T], obj: T): java.util.Map[String, Any] = {
     st.subclasses.find(_.clazz.isInstance(obj)) match {
-      case Some(entity) =>
-        val result = apply(entity, obj)
+      case Some(entity: YClassMap[T]) =>
+        val result = new util.HashMap[String, Any]()
+        result.putAll(apply(entity, obj))
         result.put("$type$", entity.clazz.getSimpleName)
         result
       case None =>
         throw CaseYamlException(
-          s"Class ${obj.getClass} is not registred as a subclass of sealed trait ${st.clazz.getName}"
+          s"Class ${obj.getClass.getName} is not registred as a subclass of sealed trait ${st.clazz.getName}"
         )
     }
   }

@@ -18,17 +18,19 @@ package cc.cu.tplex.caseyaml.model
 
 import org.scalatest.FlatSpec
 import org.scalatest.matchers.ShouldMatchers
+import cc.cu.tplex.caseyaml.test.CustomMatchers
 
-class EntityTests extends FlatSpec with ShouldMatchers {
+class EntityTests extends FlatSpec with ShouldMatchers with CustomMatchers {
   import ModelFixture.model
 
   def testEntity(entity: YClassMap[ProjectModel]) {
-    val Seq(id, name, enabled, count, fraction, plugins) = entity.entries
+    val Seq(id, name, enabled, count, fraction, shape, plugins) = entity.entries
 
     id.field(model).get           should equal (ModelId("test"))
     name.field(model).get         should equal ("name")
     enabled.field(model).get      should equal (true)
     count.field(model).get        should equal (10)
+    shape.field(model).get        should equal (Circle(0, 0, 0))
     fraction.field(model).get     should equal (12.2)
 
     {
@@ -65,5 +67,36 @@ class EntityTests extends FlatSpec with ShouldMatchers {
 
   "Reflectively generated entity" should "allow access to object fields" in {
     testEntity(ModelFixture.reflectiveEntity)
+  }
+
+  def testSealedTrait(entity: YSealedTrait[Shape]) {
+    val YSealedTrait(rectEntity, circEntity) = ShapeFixture.manualEntity
+
+    rectEntity.clazz should be theSameInstanceAs classOf[Rectangle]
+    circEntity.clazz should be theSameInstanceAs classOf[Circle]
+
+    val re = rectEntity.asInstanceOf[YClassMap[Rectangle]]
+    val ce = circEntity.asInstanceOf[YClassMap[Circle]]
+
+    import ShapeFixture.{shapeRect, shapeCirc}
+
+    val Seq(x1, y1, x2, y2) = re.entries
+    x1.field(shapeRect).get should equal (1.0)
+    y1.field(shapeRect).get should equal (2.0)
+    x2.field(shapeRect).get should equal (3.0)
+    y2.field(shapeRect).get should equal (4.0)
+
+    val Seq(x, y, r) = ce.entries
+    x.field(shapeCirc).get should equal (5.0)
+    y.field(shapeCirc).get should equal (6.0)
+    r.field(shapeCirc).get should equal (7.0)
+  }
+
+  "Manually constructed YSealedTrait" should "allow extracting object fields" in {
+    testSealedTrait(ShapeFixture.manualEntity)
+  }
+
+  "Macrogenerated YSealedTrait" should "allow extracting object fields too" in {
+    testSealedTrait(ShapeFixture.reflectiveEntity)
   }
 }

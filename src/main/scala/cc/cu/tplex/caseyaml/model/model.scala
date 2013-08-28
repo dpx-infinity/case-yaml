@@ -52,40 +52,49 @@ case class YSealedTrait[Cls: TypeTag](subclasses: YClassMap[_ <: Cls]*)
 }
 
 object YSealedTrait {
+  import scala.language.experimental.macros
   import scala.reflect.macros.Context
 
-  type TreeGenProvider = (TypeTag[X] => ReflectiveEntityTreeGenerator[X]) forSome { type X }
+  def construct[T]: YSealedTrait[T] = macro construct_impl[T]
 
-  def construct[T](gen: TreeGenProvider): YSealedTrait[T] =
-    macro construct_impl
-
-  def construct_impl[T: c.WeakTypeTag](c: Context)(gen: c.Expr[TreeGenProvider]) = {
+  def construct_impl[T: c.WeakTypeTag](c: Context): c.Expr[YSealedTrait[T]] = {
     import c.universe._
 
-    val symbol = weakTypeOf[T].typeSymbol
+    val tSym = weakTypeOf[T].typeSymbol
+    c.echo(c.enclosingPosition, s"Provided symbol: $tSym")
 
-    if (!symbol.isClass) {
+    if (!tSym.isClass) {
       c.abort(c.enclosingPosition, "Can only construct YSealedTrait from _sealed trait_")
-    } else if (!symbol.asClass.isTrait) {
+    } else if (!tSym.asClass.isTrait) {
       c.abort(c.enclosingPosition, "Can only construct YSealedTrait from sealed _trait_")
-    } else if (!symbol.asClass.isSealed) {
+    } else if (!tSym.asClass.isSealed) {
       c.abort(c.enclosingPosition, "Can only construct YSealedTrait from _sealed_ trait")
     } else {
-      val children = symbol.asClass.knownDirectSubclasses.toSeq
-
-      if (!children.forall(c => c.isClass && c.asClass.isCaseClass)) {
+      val children = tSym.asClass.knownDirectSubclasses.toSeq
+      if (children.isEmpty) {
+        c.abort(c.enclosingPosition, "Could not find any sealed trait children")
+      } else if (!children.forall(c => c.isClass && c.asClass.isCaseClass)) {
         c.abort(c.enclosingPosition, "All children of sealed trait must be case classes")
       }
+      c.echo(c.enclosingPosition, s"Found children: [${children.mkString(", ")}]")
 
-      def reflectiveCall[X](generator: c.Expr[TreeGenProvider],
-                            tpe: c.Expr[ru.TypeTag[X]]): c.Expr[ReflectiveEntityTreeGenerator[X]] =
-        reify { generator.splice.apply(tpe.splice) }
-
-      reify {
-        val g = gen.splice
-
+      val retgIdent = Ident(weakTypeOf[ReflectiveEntityTreeGenerator[_]].typeSymbol.name)
+      val entities: Seq[c.Expr[YClassMap[_ <: T]]] = children.map { chsym =>
+        val chIdent = Ident(chsym.name)
+        val `new RETGenerator[C]` = New(AppliedTypeTree(retgIdent, chIdent :: Nil))
+        val `new RETGenerator[C].<init>` = Select(`new RETGenerator[C]`, nme.CONSTRUCTOR)
+        val `new RETGenerator[C].<init>()` = Apply(`new RETGenerator[C].<init>`, Nil)
+        val `new RETGenerator[C].<init>().generateClass` =
+          Select(`new RETGenerator[C].<init>()`, newTermName("generateClass"))
+        c.Expr[YClassMap[_ <: T]](Apply(`new RETGenerator[C].<init>().generateClass`, Nil))
       }
 
+      val ystIdent = reify(YSealedTrait).tree
+      val `YSealedTrait.apply` = Select(ystIdent, newTermName("apply"))
+      val `YSealedTrait.apply[T]` = TypeApply(`YSealedTrait.apply`, TypeTree(weakTypeOf[T]) :: Nil)
+      val `YSealedTrait.apply[T](entities)` = Apply(`YSealedTrait.apply[T]`, entities.map(_.tree).toList)
+
+      c.Expr[YSealedTrait[T]](`YSealedTrait.apply[T](entities)`)
     }
   }
 }

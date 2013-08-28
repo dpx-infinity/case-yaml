@@ -37,6 +37,7 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] {
   private final val mirror = typeTag[Obj].mirror
 
   private final val stringConvertedTypes = ArrayBuffer[StringConvertedField[_]]()
+  private final val sealedTraitTypes = ArrayBuffer[SealedTraitField[_]]()
 
   def withStringConvertedField[T: TypeTag](field: StringConvertedField[T]): ReflectiveEntityTreeGenerator[Obj] = {
     stringConvertedTypes += field
@@ -46,6 +47,26 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] {
   def withStringConvertedField[T: TypeTag](toStr: T => String,
                                            fromStr: String => T): ReflectiveEntityTreeGenerator[Obj] =
     withStringConvertedField(StringConvertedField(toStr, fromStr))
+
+  def withSealedTraitField[T: TypeTag](field: SealedTraitField[T]): ReflectiveEntityTreeGenerator[Obj] = {
+    sealedTraitTypes += field
+    this
+  }
+
+  def withSealedTraitField[T: TypeTag](entity: YSealedTrait[T]): ReflectiveEntityTreeGenerator[Obj] =
+    withSealedTraitField(SealedTraitField(entity))
+
+  def withField[T: TypeTag](field: StringConvertedField[T]): ReflectiveEntityTreeGenerator[Obj] =
+    withStringConvertedField(field)
+
+  def withField[T: TypeTag](toStr: T => String, fromStr: String => T): ReflectiveEntityTreeGenerator[Obj] =
+    withStringConvertedField(toStr, fromStr)
+
+  def withField[T: TypeTag](field: SealedTraitField[T]): ReflectiveEntityTreeGenerator[Obj] =
+    withSealedTraitField(field)
+
+  def withField[T: TypeTag](entity: YSealedTrait[T]): ReflectiveEntityTreeGenerator[Obj] =
+    withSealedTraitField(entity)
 
   def generate[Yml]: YEntity[Obj, Yml] = {
     val tpe = typeOf[Obj]
@@ -69,7 +90,8 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] {
     generateSet +>
     generateMap +>
     generateStringConverted +>
-    generateClassMap
+    generateClassMap +>
+    generateSealedTrait
 
   private final def firstTypeParam(tpe: Type) =
     tpe.asInstanceOf[TypeRefApi].args.head
@@ -131,18 +153,24 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] {
     } else generate(param.typeSignature)
 
   // The following is just a black magic I don't really understand, but it seems to work
-  private def generateClassMap(tpe: Type): Option[YEntity[_, _]] = if (tpe.typeSymbol.asClass.isCaseClass) Some {
-    val List(params) = tpe.declaration(nme.CONSTRUCTOR).asMethod.paramss
-    val entries: Seq[YEntry[_, _, _]] = params.zipWithIndex map { case (param, idx) =>
-      import cc.cu.tplex.caseyaml.model._
-      NamedField(param.name.toString).createEntry(generateForEntry(idx, param, tpe), mirror, tpe)
-    }
-    YClassMap(entries: _*)(TypeTag(mirror, new TypeCreator {
-      def apply[U <: Universe with Singleton](m: api.Mirror[U]) =
-        if (m eq mirror) tpe.asInstanceOf[U # Type]
-        else throw new IllegalArgumentException(s"Type tag defined in $mirror cannot be migrated to other mirrors.")
-    }))
-  } else None
+  private def generateClassMap(tpe: Type): Option[YEntity[_, _]] =
+    if (tpe.typeSymbol.isClass && tpe.typeSymbol.asClass.isCaseClass) Some {
+      val List(params) = tpe.declaration(nme.CONSTRUCTOR).asMethod.paramss
+      val entries: Seq[YEntry[_, _, _]] = params.zipWithIndex map { case (param, idx) =>
+        import cc.cu.tplex.caseyaml.model._
+        NamedField(param.name.toString).createEntry(generateForEntry(idx, param, tpe), mirror, tpe)
+      }
+      YClassMap(entries: _*)(TypeTag(mirror, new TypeCreator {
+        def apply[U <: Universe with Singleton](m: api.Mirror[U]) =
+          if (m eq mirror) tpe.asInstanceOf[U # Type]
+          else throw new IllegalArgumentException(s"Type tag defined in $mirror cannot be migrated to other mirrors.")
+      }))
+    } else None
+
+  private def generateSealedTrait(tpe: Type): Option[YEntity[_, _]] =
+    if (tpe.typeSymbol.isClass && tpe.typeSymbol.asClass.isTrait && tpe.typeSymbol.asClass.isSealed) {
+      sealedTraitTypes.find(_.tpe =:= tpe).map(_.entity)
+    } else None
 
   private final val intCompatibles = Seq[(Type, YEntity[_, _])](
     typeOf[Byte] -> YIntCompatible.YByte,
@@ -162,6 +190,10 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] {
 }
 
 case class StringConvertedField[T: TypeTag](toStr: T => String, fromStr: String => T) {
+  val tpe = typeOf[T]
+}
+
+case class SealedTraitField[T: TypeTag](entity: YSealedTrait[T]) {
   val tpe = typeOf[T]
 }
 

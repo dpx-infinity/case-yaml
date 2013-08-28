@@ -278,12 +278,19 @@ class ConvertToYmlTest extends FlatSpec with ShouldMatchers {
   }
 
   def checkYmlMap(m: java.util.Map[String, Any], renamedField: Boolean) {
-    m should have size 6
+    m should have size 7
     m.get("id") should equal ("test")
     m.get("name") should equal ("name")
     m.get("enabled") should equal (true)
     m.get("count") should equal (10)
     m.get("fraction") should equal (12.2)
+
+    val shape = m.get("shape").asInstanceOf[java.util.Map[String, Any]]
+    shape should have size 4
+    shape.get("$type$") should equal ("Circle")
+    shape.get("x") should equal (0)
+    shape.get("y") should equal (0)
+    shape.get("r") should equal (0)
 
     val plugins = m.get("plugins").asInstanceOf[java.util.Map[String, java.util.Map[String, Any]]]
     plugins should have size 2

@@ -31,6 +31,7 @@ case class ProjectModel(id: ModelId,
                         enabled: Boolean,
                         count: Int,
                         fraction: Double,
+                        shape: Shape,
                         plugins: Map[String, PluginModel])
 
 case class PluginModel(id: ModelId,
@@ -38,6 +39,10 @@ case class PluginModel(id: ModelId,
                        data: Option[BigDecimal],
                        status: String = "active",
                        dependencies: Seq[ModelId])
+
+sealed trait Shape
+case class Rectangle(x1: Double, y1: Double, x2: Double, y2: Double) extends Shape
+case class Circle(x: Double, y: Double, r: Double) extends Shape
 
 object ModelFixture {
   val modelId = YStringConverted[ModelId](_.id, ModelId)
@@ -48,6 +53,19 @@ object ModelFixture {
     "enabled"    --> YBoolean,
     "count"      --> YIntCompatible.YInt,
     "fraction"   --> YFloatCompatible.YDouble,
+    "shape"      --> YSealedTrait[Shape](
+      YClassMap[Rectangle](
+        "x1" --> YFloatCompatible.YDouble,
+        "y1" --> YFloatCompatible.YDouble,
+        "x2" --> YFloatCompatible.YDouble,
+        "y2" --> YFloatCompatible.YDouble
+      ),
+      YClassMap[Circle](
+        "x" --> YFloatCompatible.YDouble,
+        "y" --> YFloatCompatible.YDouble,
+        "r" --> YFloatCompatible.YDouble
+      )
+    ),
     "plugins"    --> YMap(YClassMap[PluginModel](
       "id"                    --> modelId,
       "name" ~> "pluginName"  --> YString,
@@ -59,9 +77,9 @@ object ModelFixture {
 
   val reflectiveEntity =
     CaseYaml.reflectiveEntityGeneratorFor[ProjectModel]
-      .withStringConvertedField[ModelId]((_: ModelId).id, ModelId)
+      .withField[ModelId]((_: ModelId).id, ModelId)
+      .withField[Shape](YSealedTrait.construct[Shape])
       .generateClass
-
 
   val model = ProjectModel(
     ModelId("test"),
@@ -69,6 +87,7 @@ object ModelFixture {
     true,
     10,
     12.2,
+    Circle(0, 0, 0),
     Map(
       "plugin1" -> PluginModel(
         ModelId("id"),
@@ -86,5 +105,25 @@ object ModelFixture {
       )
     )
   )
+}
 
+object ShapeFixture {
+  val manualEntity = YSealedTrait[Shape](
+     YClassMap[Rectangle](
+       "x1" --> YFloatCompatible.YDouble,
+       "y1" --> YFloatCompatible.YDouble,
+       "x2" --> YFloatCompatible.YDouble,
+       "y2" --> YFloatCompatible.YDouble
+     ),
+     YClassMap[Circle](
+       "x" --> YFloatCompatible.YDouble,
+       "y" --> YFloatCompatible.YDouble,
+       "r" --> YFloatCompatible.YDouble
+     )
+  )
+
+  val reflectiveEntity = YSealedTrait.construct[Shape]
+
+  val shapeRect = Rectangle(1, 2, 3, 4)
+  val shapeCirc = Circle(5, 6, 7)
 }
