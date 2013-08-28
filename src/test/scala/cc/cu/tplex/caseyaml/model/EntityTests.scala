@@ -35,7 +35,7 @@ class EntityTests extends FlatSpec with ShouldMatchers {
       val pluginsMap = plugins.field(model).get.asInstanceOf[Map[String, PluginModel]]
       pluginsMap should have size 2
 
-      val Seq(id, name, data, dependencies) =
+      val Seq(id, name, data, status, dependencies) =
         plugins.entity.asInstanceOf[YMap[PluginModel, java.util.Map[String, Any]]]
         .valueEntity.asInstanceOf[YClassMap[PluginModel]].entries
 
@@ -44,6 +44,7 @@ class EntityTests extends FlatSpec with ShouldMatchers {
         id.field(plugin).get           should equal (ModelId("id"))
         name.field(plugin).get         should equal ("name")
         data.field(plugin).get         should equal (None)
+        status.field(plugin).get       should equal ("inactive")
         dependencies.field(plugin).get should equal (Seq(ModelId("id1"), ModelId("id2")))
       }
 
@@ -52,6 +53,7 @@ class EntityTests extends FlatSpec with ShouldMatchers {
         id.field(plugin).get           should equal (ModelId("id2"))
         name.field(plugin).get         should equal ("name2")
         data.field(plugin).get         should equal (Some(BigDecimal(123.45)))
+        status.field(plugin).get       should equal ("active")
         dependencies.field(plugin).get should equal (Seq.empty)
       }
     }

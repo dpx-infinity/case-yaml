@@ -59,7 +59,7 @@ object ModelFixture {
 
   val reflectiveEntity =
     CaseYaml.reflectiveEntityGeneratorFor[ProjectModel]
-      .withStringConvertedField[ModelId](_.id, ModelId)
+      .withStringConvertedField[ModelId]((_: ModelId).id, ModelId)
       .generateClass
 
 

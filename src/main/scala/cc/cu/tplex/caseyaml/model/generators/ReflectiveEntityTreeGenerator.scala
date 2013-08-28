@@ -31,19 +31,21 @@ import scala.reflect.api
  *
  * @author Vladimir Matveev
  */
-class ReflectiveEntityTreeGenerator[Obj: TypeTag] { outer =>
+class ReflectiveEntityTreeGenerator[Obj: TypeTag] {
   import ReflectiveEntityTreeGenerator._
 
   private final val mirror = typeTag[Obj].mirror
 
-  private final val stringConvertedTypes = ArrayBuffer[
-    (Type, (T) => String, (String) => T) forSome { type T }
-  ]()
+  private final val stringConvertedTypes = ArrayBuffer[StringConvertedField[_]]()
 
-  def withStringConvertedField[T: TypeTag](toStr: T => String, fromStr: String => T) = {
-    stringConvertedTypes += ((typeOf[T], toStr, fromStr))
+  def withStringConvertedField[T: TypeTag](field: StringConvertedField[T]): ReflectiveEntityTreeGenerator[Obj] = {
+    stringConvertedTypes += field
     this
   }
+
+  def withStringConvertedField[T: TypeTag](toStr: T => String,
+                                           fromStr: String => T): ReflectiveEntityTreeGenerator[Obj] =
+    withStringConvertedField(StringConvertedField(toStr, fromStr))
 
   def generate[Yml]: YEntity[Obj, Yml] = {
     val tpe = typeOf[Obj]
@@ -58,8 +60,7 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] { outer =>
   }
 
   private final val generator: Type => Option[YEntity[_, _]] =
-    generateDefaultable _ +>
-    generateIntCompatible +>
+    generateIntCompatible _ +>
     generateFloatCompatible +>
     generateString +>
     generateBoolean +>
@@ -77,31 +78,31 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] { outer =>
     tpe.asInstanceOf[TypeRefApi].args.tail.head
 
   private def generateStringConverted(tpe: Type): Option[YEntity[_, _]] =
-    stringConvertedTypes.find(_._1 =:= tpe) map {
-      case (_, toStr, fromStr) => YStringConverted(toStr, fromStr)
+    stringConvertedTypes.find(_.tpe =:= tpe) map {
+      case StringConvertedField(toStr, fromStr) => YStringConverted(toStr, fromStr)
     }
 
   private def generateMap(tpe: Type): Option[YEntity[_, _]] =
     if (tpe <:< typeOf[Map[_, _]])
-      Some(YMap(outer.generate(secondTypeParam(tpe.baseType(typeOf[Map[_, _]].typeSymbol)))))
+      Some(YMap(generate(secondTypeParam(tpe.baseType(typeOf[Map[_, _]].typeSymbol)))))
     else
       None
 
   private def generateSet(tpe: Type): Option[YEntity[_, _]] =
     if (tpe <:< typeOf[Set[_]])
-      Some(YSet(outer.generate(firstTypeParam(tpe.baseType(typeOf[Set[_]].typeSymbol)))))
+      Some(YSet(generate(firstTypeParam(tpe.baseType(typeOf[Set[_]].typeSymbol)))))
     else
       None
 
   private def generateList(tpe: Type): Option[YEntity[_, _]] =
     if (tpe <:< typeOf[Seq[_]])
-      Some(YList(outer.generate(firstTypeParam(tpe.baseType(typeOf[Seq[_]].typeSymbol)))))
+      Some(YList(generate(firstTypeParam(tpe.baseType(typeOf[Seq[_]].typeSymbol)))))
     else
       None
 
   private def generateOptional(tpe: Type): Option[YEntity[_, _]] =
     if (tpe <:< typeOf[Option[_]])
-      Some(YOptional(outer.generate(firstTypeParam(tpe))))
+      Some(YOptional(generate(firstTypeParam(tpe))))
     else
       None
 
@@ -111,12 +112,30 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] { outer =>
   private def generateString(tpe: Type): Option[YEntity[_, _]] =
     if (tpe =:= typeOf[String]) Some(YString) else None
 
+  private def generateForEntry(idx: Int, param: Symbol, classTpe: Type): YEntity[_, _] =
+    if (param.asTerm.isParamWithDefault) {
+      val moduleMirror = mirror.reflectModule(classTpe.typeSymbol.asClass.companionSymbol.asModule)
+
+      val defaultName = {
+        import scala.reflect.internal.{Definitions, SymbolTable, StdNames}
+        val cu = scala.reflect.runtime.universe.asInstanceOf[Definitions with SymbolTable with StdNames]
+        cu.nme.defaultGetterName(cu.nme.CONSTRUCTOR, idx+1).asInstanceOf[Name]
+//        newTermName("$lessinit$greater$default$" + (idx + 1))
+      }
+      val defaultSymbol = moduleMirror.symbol.typeSignature.declaration(defaultName)
+
+      val defaultMethod = mirror.reflect(moduleMirror.instance).reflectMethod(defaultSymbol.asMethod)
+      val defaultValue = defaultMethod.apply()
+
+      YDefault(generate(param.typeSignature).asInstanceOf[YEntity[Any, Any]], defaultValue)
+    } else generate(param.typeSignature)
+
   // The following is just a black magic I don't really understand, but it seems to work
   private def generateClassMap(tpe: Type): Option[YEntity[_, _]] = if (tpe.typeSymbol.asClass.isCaseClass) Some {
     val List(params) = tpe.declaration(nme.CONSTRUCTOR).asMethod.paramss
-    val entries: Seq[YEntry[_, _, _]] = params map { param =>
+    val entries: Seq[YEntry[_, _, _]] = params.zipWithIndex map { case (param, idx) =>
       import cc.cu.tplex.caseyaml.model._
-      NamedField(param.name.toString).createEntry(outer.generate(param.typeSignature), mirror, tpe)
+      NamedField(param.name.toString).createEntry(generateForEntry(idx, param, tpe), mirror, tpe)
     }
     YClassMap(entries: _*)(TypeTag(mirror, new TypeCreator {
       def apply[U <: Universe with Singleton](m: api.Mirror[U]) =
@@ -140,9 +159,10 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] { outer =>
     typeOf[BigDecimal] -> YFloatCompatible.YBigDecimal
   )
   private def generateFloatCompatible(tpe: Type): Option[YEntity[_, _]] = floatCompatibles get tpe
+}
 
-  // TODO: fix this (or move to generateClassMap?)
-  private def generateDefaultable(tpe: Type): Option[YEntity[_, _]] = None
+case class StringConvertedField[T: TypeTag](toStr: T => String, fromStr: String => T) {
+  val tpe = typeOf[T]
 }
 
 private object ReflectiveEntityTreeGenerator {
