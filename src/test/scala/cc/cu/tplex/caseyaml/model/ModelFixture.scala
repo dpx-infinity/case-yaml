@@ -78,7 +78,7 @@ object ModelFixture {
   val reflectiveEntity =
     CaseYaml.reflectiveEntityGeneratorFor[ProjectModel]
       .withField[ModelId]((_: ModelId).id, ModelId)
-      .withField[Shape](YSealedTrait.construct[Shape])
+//      .withField[Shape](YSealedTrait.construct[Shape])
       .generateClass
 
   val model = ProjectModel(

@@ -72,7 +72,8 @@ object YSealedTrait {
     } else {
       val children = tSym.asClass.knownDirectSubclasses.toSeq
       if (children.isEmpty) {
-        c.abort(c.enclosingPosition, "Could not find any sealed trait children")
+        // Temporary disabled
+        // c.abort(c.enclosingPosition, "Could not find any sealed trait children")
       } else if (!children.forall(c => c.isClass && c.asClass.isCaseClass)) {
         c.abort(c.enclosingPosition, "All children of sealed trait must be case classes")
       }

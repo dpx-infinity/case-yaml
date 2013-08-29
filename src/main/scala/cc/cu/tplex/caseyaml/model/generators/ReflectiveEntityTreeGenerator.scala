@@ -91,7 +91,8 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] {
     generateMap +>
     generateStringConverted +>
     generateClassMap +>
-    generateSealedTrait
+    generateSealedTrait +>
+    generateSealedTraitReflective
 
   private final def firstTypeParam(tpe: Type) =
     tpe.asInstanceOf[TypeRefApi].args.head
@@ -152,6 +153,14 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] {
       YDefault(generate(param.typeSignature).asInstanceOf[YEntity[Any, Any]], defaultValue)
     } else generate(param.typeSignature)
 
+  private def typeCreator(tpe: Type) = new TypeCreator {
+    def apply[U <: Universe with Singleton](m: api.Mirror[U]) =
+      if (m eq mirror) tpe.asInstanceOf[U # Type]
+      else throw new IllegalArgumentException(s"Type tag defined in $mirror cannot be migrated to other mirrors.")
+  }
+
+  private def customTypeTag[T](tpe: Type): TypeTag[T] = TypeTag(mirror, typeCreator(tpe))
+
   // The following is just a black magic I don't really understand, but it seems to work
   private def generateClassMap(tpe: Type): Option[YEntity[_, _]] =
     if (tpe.typeSymbol.isClass && tpe.typeSymbol.asClass.isCaseClass) Some {
@@ -160,16 +169,24 @@ class ReflectiveEntityTreeGenerator[Obj: TypeTag] {
         import cc.cu.tplex.caseyaml.model._
         NamedField(param.name.toString).createEntry(generateForEntry(idx, param, tpe), mirror, tpe)
       }
-      YClassMap(entries: _*)(TypeTag(mirror, new TypeCreator {
-        def apply[U <: Universe with Singleton](m: api.Mirror[U]) =
-          if (m eq mirror) tpe.asInstanceOf[U # Type]
-          else throw new IllegalArgumentException(s"Type tag defined in $mirror cannot be migrated to other mirrors.")
-      }))
+      YClassMap(entries: _*)(customTypeTag(tpe))
     } else None
 
   private def generateSealedTrait(tpe: Type): Option[YEntity[_, _]] =
     if (tpe.typeSymbol.isClass && tpe.typeSymbol.asClass.isTrait && tpe.typeSymbol.asClass.isSealed) {
       sealedTraitTypes.find(_.tpe =:= tpe).map(_.entity)
+    } else None
+
+  private def generateSealedTraitReflective(tpe: Type): Option[YEntity[_, _]] =
+    if (tpe.typeSymbol.isClass && tpe.typeSymbol.asClass.isTrait && tpe.typeSymbol.asClass.isSealed) {
+      val tsym = tpe.typeSymbol.asClass
+      val subclasses = tsym.knownDirectSubclasses
+      val entities = for {
+        chsym @ (_s: ClassSymbol) <- subclasses
+        if chsym.isCaseClass
+        classMap @ (_c: YClassMap[_]) <- generateClassMap(chsym.toType)
+      } yield classMap
+      Some(YSealedTrait(entities.toSeq: _*)(customTypeTag(tpe)))
     } else None
 
   private final val intCompatibles = Seq[(Type, YEntity[_, _])](
