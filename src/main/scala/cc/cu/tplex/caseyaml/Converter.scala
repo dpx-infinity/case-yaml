@@ -98,7 +98,7 @@ private[caseyaml] class DefaultConverter[Obj, Yml] (entity: YEntity[Obj, Yml],
   }
 
   def serialize(obj: Obj): Serializer[Yml] = new Serializer[Yml] {
-    def toStr = wrap(yaml.dump(obj))
+    def toStr = wrap(yaml.dump(ConvertToYml(entity, obj)))
 
     def to(writer: Writer) {
       wrap(yaml.dump(ConvertToYml(entity, obj), writer))
